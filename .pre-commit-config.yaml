@@ -1,7 +1,7 @@
 # The gate for the CLI TEMPLATE REPOSITORY itself. Run with: prek run --all-files
 #
 # This repo has no `tools/` of its own: the hooks, the conventions checker and the rest of the
-# machinery belong to the base template (python-template), which a generated project receives.
+# machinery belong to the base template (python-template-base), which a generated project receives.
 # Borrowing them here would mean copying them or pinning a fetch, and either drifts. So the gate
 # is the hooks that need no scripts, and the generation tests carry the rest.
 #

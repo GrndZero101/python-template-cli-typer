@@ -5,7 +5,7 @@ typer command-line tool, its tests and the skills that teach a model to extend i
 **not** a Python project.
 
 The other layer is the **base**, the repository
-[python-template](https://github.com/GrndZero101/python-template): the hooks, `tools/`, `CLAUDE.md`,
+[python-template-base](https://github.com/GrndZero101/python-template-base): the hooks, `tools/`, `CLAUDE.md`,
 the shared skills and the gate. This layer's one `_tasks` entry applies the base to the same
 directory, so one `copier copy` of this repo yields both layers, each with its own answers file.
 
@@ -58,11 +58,11 @@ fall back to default rules and `ty` would find no environment. What covers it in
 only when the commit touches `template/`, `tests/`, `copier.yml`, `pyproject.toml` or `uv.lock`.
 `SKIP=generation-tests git commit -m "..."` skips it deliberately.
 
-The suite needs the base. `BASE_TEMPLATE_DIR` names a checkout of python-template; without it the
+The suite needs the base. `BASE_TEMPLATE_DIR` names a checkout of python-template-base; without it the
 tests use the base on GitHub. Set it when the change under test depends on an unpushed base change:
 
 ```bash
-BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template uv run pytest
+BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template-base uv run pytest
 ```
 
 Copier includes uncommitted working-tree changes when a template is a local path (it warns
