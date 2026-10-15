@@ -59,27 +59,35 @@ The base also works alone, for a prototype or a repo adopting the guards:
 
 ### Keeping it in sync with the template
 
-A project records two sources, so an update is two commands, each on a clean tree and each touching
-only its own layer's files: `copier update --trust` for this layer, and
-`copier update --trust -a .copier-answers.base.yml` for the base.
+A project records one source per layer, each in its own answers file, and each layer updates
+separately, touching only its own files:
+
+| Layer | Answers file | Command |
+|---|---|---|
+| This one, the CLI | `.copier-answers.yml` | `copier update --trust` |
+| The base | `.copier-answers.base.yml` | `copier update --trust -a .copier-answers.base.yml` |
+
+Run both, this layer first. Each needs a clean tree, so commit between them:
 
 ```bash
 git status --short                    # must be clean; copier refuses otherwise
 git switch -c chore/template-update   # branch first; main takes no direct commits
-copier update --trust                 # three-way merge into the working tree
+
+copier update --trust                 # this layer: a three-way merge into the working tree
 # resolve conflicts, if any (below)
 uv sync                               # before any check; see below
 git diff                              # review; nothing is committed for you
-prek run --all-files
-uv run pytest
 git add -A                            # -A, not -a: the template may have added files
-git commit -m "chore(template): update to python-template-cli-typer <commit>"
-git switch main
-git merge --no-ff -m "chore(template): update to python-template-cli-typer <commit>" chore/template-update
-git branch -d chore/template-update
+git commit -m "chore(template): update python-template-cli-typer to <commit>"
+
+copier update --trust -a .copier-answers.base.yml
+# resolve, sync, review and commit as above, naming python-template-base
+
+uv run python tools/finish_branch.py "chore(template): update from the templates"
 ```
 
-`<commit>` is the `_commit` value copier just wrote to `.copier-answers.yml`.
+`<commit>` is the `_commit` value copier just wrote to that layer's answers file.
+`finish_branch.py` squashes the branch, runs the gate and the tests, and merges it into `main`.
 
 **Run `copier update` yourself, not through an agent.** `--trust` is required because the template
 declares `_tasks`. Every task is guarded to run on `copy` only, but copier asks for the flag anyway,
@@ -122,7 +130,7 @@ copier copy --trust --vcs-ref <commit> gh:GrndZero101/python-template-cli-typer 
 copier update --trust --vcs-ref <commit>
 ```
 
-Do not delete `.copier-answers.yml` — `copier update` reads it to know what you answered.
+Do not delete either answers file — `copier update` reads it to know what you answered.
 
 ---
 
