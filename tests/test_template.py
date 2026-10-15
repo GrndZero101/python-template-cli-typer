@@ -458,9 +458,37 @@ def test_the_layers_define_the_shared_questions_alike(base_checkout: Path) -> No
             assert question.get(key) == use_case[name].get(key), f"{name}: `{key}` differs"
 
 
+# A user's copier settings file, naming a default for every shared question that no answer here
+# uses. Settings outrank a template's own default, so a layer that fell back to its default would
+# record one of these instead of the answer. The base doesn't: its copy, run with no `-a`, reads
+# this layer's `.copier-answers.yml` as its last answers, and those outrank settings. Nothing
+# documents that, so this pins it.
+CLASHING_SETTINGS = """\
+defaults:
+  project_name: From Settings
+  author_name: From Settings
+  author_email: settings@example.com
+  python_version: "3.12"
+  license: Proprietary
+  copyright_holder: From Settings
+  copyright_year: "1999"
+"""
+
+
 @requires_uv
-def test_the_answers_files_agree_on_the_shared_questions(copie: Copie, base_checkout: Path) -> None:
-    """Generated, the base must have recorded exactly what the use case did."""
+@pytest.mark.parametrize("settings", [None, CLASHING_SETTINGS], ids=["no-settings", "clashing"])
+def test_the_answers_files_agree_on_the_shared_questions(
+    copie: Copie,
+    base_checkout: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    settings: str | None,
+) -> None:
+    """Generated, the base must have recorded exactly what the use case did, settings or none."""
+    if settings is not None:
+        settings_file = tmp_path / "settings.yml"
+        settings_file.write_text(settings, encoding="utf-8")
+        monkeypatch.setenv("COPIER_SETTINGS_PATH", str(settings_file))
     project = _generate(copie)
     base = _load_yaml(project / ".copier-answers.base.yml")
     use_case = _load_yaml(project / ".copier-answers.yml")
