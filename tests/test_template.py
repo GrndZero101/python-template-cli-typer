@@ -318,6 +318,15 @@ def test_the_use_case_keeps_the_pyproject_it_wrote(copie: Copie) -> None:
     assert (project / "ruff-base.toml").is_file()
 
 
+@requires_uv
+def test_a_blank_author_email_is_left_out(copie: Copie) -> None:
+    """`email = ""` is not an address; an author with none gets no `email` key at all."""
+    project = _generate(copie, author_email="")
+    pyproject = (project / "pyproject.toml").read_text(encoding="utf-8")
+    authors = tomllib.loads(pyproject)["project"]["authors"]
+    assert authors == [{"name": BASE_ANSWERS["author_name"]}]
+
+
 # --- the licence ---------------------------------------------------------------------------
 
 HOLDER = "Acme Ltd"
