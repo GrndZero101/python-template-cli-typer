@@ -71,7 +71,9 @@ author_name:
 
 author_email:
   type: str
-  help: Author email
+  help: >-
+    Author email, or blank to leave it out. GitHub's noreply address keeps yours private:
+    <id>+<username>@users.noreply.github.com, under Settings > Emails
 
 # A choice, not free text: the scaffold uses `typing.override`, so anything below 3.12 generates a
 # project that passes its gate and then fails at import. `.python-version` is rendered from this,
