@@ -20,7 +20,7 @@ below that the template still reaches; act on what it finds only when the fix wo
 The commands set `REPO` to this checkout and name the run after the spec and the model:
 
 ```bash
-REPO=~/projects/github/GrndZero101/python-template
+REPO=~/projects/github/GrndZero101/python-template-cli-typer
 SPEC=geo MODEL=sonnet                 # or currency, spend, logs; or haiku, for a stretch run
 RUN=~/scratch/spec-runs/$SPEC-$MODEL
 ```
@@ -30,7 +30,7 @@ RUN=~/scratch/spec-runs/$SPEC-$MODEL
 ```bash
 copier copy --trust --defaults --vcs-ref main \
   -d project_name="Spec Run" -d author_name="A Dev" -d author_email=dev@example.com \
-  gh:GrndZero101/python-template "$RUN"
+  gh:GrndZero101/python-template-cli-typer "$RUN"
 grep _commit "$RUN/.copier-answers.yml"   # note it: the template commit this run measures
 ```
 
@@ -77,8 +77,9 @@ change from what was just the model.
 
 ### 5. Record
 
-Add a row to the results table under "Spec runs" in [TODO.md](../TODO.md), and turn each template
-finding into an item in the phase it belongs to.
+Add a row to the results table under "Spec runs" in the base repository's
+[TODO.md](https://github.com/GrndZero101/python-template/blob/main/TODO.md), and turn each
+template finding into an item in the phase it belongs to.
 
 Things worth watching for while it builds: the branch guard on the first edit, whether the gate's
 stderr was actionable, whether the skill was loaded at all, and whether the result needed
@@ -94,5 +95,5 @@ stderr was actionable, whether the skill was loaded at all, and whether the resu
 | [logs.md](logs.md) | `python-tui`: logic outside the app, validation before the screen opens, key bindings, a picker whose choice goes to stdout, Pilot tests |
 
 `geo` and `currency` were once shipped in the scaffold, and the original implementations survive
-in history at [`d8e26b0`](https://github.com/GrndZero101/python-template/tree/d8e26b0/template/src)
+in history at [`d8e26b0`](https://github.com/GrndZero101/python-template-cli-typer/tree/d8e26b0/template/src)
 — useful for comparing against what an agent builds from the spec, not for copying.

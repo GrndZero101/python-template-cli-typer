@@ -1,43 +1,39 @@
-# The gate for the TEMPLATE REPOSITORY itself. Run with: prek run --all-files
+# The gate for the CLI TEMPLATE REPOSITORY itself. Run with: prek run --all-files
 #
-# `.git` lives here, at the root, so `prek install` wires the git hooks to this file and this
-# file is what every commit-time guard reads. That is why the root cannot be metadata-only.
+# This repo has no `tools/` of its own: the hooks, the conventions checker and the rest of the
+# machinery belong to the base template (python-template), which a generated project receives.
+# Borrowing them here would mean copying them or pinning a fetch, and either drifts. So the gate
+# is the hooks that need no scripts, and the generation tests carry the rest.
 #
-# The division of labour is deliberate:
-#
-# - Every file check here EXCLUDES `template/` and `use-cases/`. They hold Jinja and no
-#   `pyproject.toml`, so ruff would fall back to default rules and ty would have no environment to
-#   resolve imports through. Their own configs are suffixed `.jinja` for the same reason: prek would
-#   otherwise adopt them as workspace members and run a gate there that is guaranteed to fail.
-# - What checks them instead is `generation-tests` below: it generates projects (the base alone, and
-#   the CLI use case with the base layered on) and runs THAT project's gate inside each, so the lint list exists exactly once, in the file a
-#   generated project actually receives.
-# - The rest covers the repo's own markdown, its one Python test module, and the commit-level
-#   rules that need a `.git` to act on.
+# - Every file check EXCLUDES `template/`. It holds Jinja and no `pyproject.toml`, so ruff would
+#   fall back to default rules and ty would have no environment to resolve imports through.
+# - What checks it instead is `generation-tests` below: it generates projects (this layer with the
+#   base layered on) and runs THAT project's gate and test suite inside each, so the lint list
+#   exists once, in the file a generated project actually receives.
+# - The rest covers the repo's own markdown, its one test module, and the commit-level rules that
+#   need a `.git` to act on.
 #
 # NOTE: `repo: builtin` is a prek extension and is NOT understood by plain `pre-commit`.
 repos:
   - repo: builtin
     hooks:
       - id: trailing-whitespace
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: end-of-file-fixer
-        exclude: ^(template|use-cases)/
-      # --assume-in-merge: see template/.pre-commit-config.yaml.jinja.
+        exclude: ^template/
+      # --assume-in-merge: see the base's template/.pre-commit-config.yaml.jinja.
       - id: check-merge-conflict
         args: [--assume-in-merge]
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: check-added-large-files
       - id: check-yaml
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: check-toml
-      # template/ ships JSONC under .vscode/, which check-json would reject; a generated
-      # project's own gate checks the strict-JSON files it receives.
       - id: check-json
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: detect-private-key
-      # Work happens on a branch; main only ever receives merge commits. See the note in
-      # template/.pre-commit-config.yaml — `stages: [pre-commit]` is what lets `--no-ff` through.
+      # Work happens on a branch; main only ever receives merge commits. `stages: [pre-commit]` is
+      # what lets `git merge --no-ff` through, as in the base's config.
       - id: no-commit-to-branch
         args: [--branch, main]
         stages: [pre-commit]
@@ -52,9 +48,9 @@ repos:
     rev: v0.2.78
     hooks:
       - id: rumdl-fmt
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: rumdl
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
 
   # The root's own Python is just the generation tests, but they are held to the same rules.
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -63,37 +59,27 @@ repos:
       # The fixer before the formatter: a fix can leave code that needs reformatting.
       - id: ruff-check
         args: [--fix]
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
       - id: ruff-format
-        exclude: ^(template|use-cases)/
+        exclude: ^template/
 
   - repo: local
     hooks:
-      # The template's own custom checker, reused on the repo that ships it. It is a literal
-      # .py file, so it runs here unchanged.
-      - id: conventions
-        name: CLAUDE.md conventions (tools/check_conventions.py)
-        entry: uv run python template/tools/check_conventions.py
-        language: system
-        types: [python]
-        exclude: ^(template|use-cases)/
-
-      # The only thing that verifies template/ and use-cases/. It generates projects and runs each
-      # one's gate and test suite inside it, so it is slow — around a minute. That is the price of
-      # the templates not being lintable in place.
+      # The only thing that verifies template/. It generates projects and runs each one's gate and
+      # test suite inside it, so it is slow — around a minute. That is the price of the template
+      # not being lintable in place.
       #
       # `files:` scopes it to what can change a generated project: the template, the copier
       # config, the tests themselves, and the dependencies that run them. A commit touching only
-      # TODO.md or this repo's own docs skips it. `.github/workflows/ci.yml` filters pushes on the
-      # same paths; change both together. The PostToolUse hook in .claude/settings.json
-      # skips it too, so a minute-long suite never runs on save. To skip it at commit as well:
+      # this repo's own docs skips it. `.github/workflows/ci.yml` filters pushes on the same paths;
+      # change both together. To skip it at commit anyway:
       #   SKIP=generation-tests git commit ...
       # `stages: [pre-commit]` is load-bearing. Without it the hook also fires at the commit-msg
-      # stage, running the whole minute-long suite a second time for a message check.
+      # stage, running the whole suite a second time for a message check.
       - id: generation-tests
         name: generate projects and run their gates
         entry: uv run pytest tests
         language: system
         pass_filenames: false
-        files: ^(template/|use-cases/|tests/|copier\.yml$|pyproject\.toml$|uv\.lock$)
+        files: ^(template/|tests/|copier\.yml$|pyproject\.toml$|uv\.lock$)
         stages: [pre-commit]

@@ -1,61 +1,85 @@
-# copier template metadata for the BASE layer: the hooks, the gate, the skills every Python
-# project shares, and a minimal pyproject.toml. Everything it generates is under `template/`.
+# copier template metadata for the CLI use case: a typer command-line tool, its tests, and the
+# skills that teach a model to extend it. The generated files are everything under `template/`.
 #
-# A use case (use-cases/cli-typer) is a second template applied to the same project. Its one task
-# runs this template with `--defaults`, so the shared questions below are answered from the use
-# case's answers file and nothing is asked twice. Run on its own, this template asks everything,
-# which is how a prototype or a brownfield repo adopts the guards.
+# This is a layer, not a whole project. Its one task applies the BASE template (the hooks, the
+# gate, `CLAUDE.md`, `tools/`, the shared skills) to the same directory, so a single `copier copy`
+# of this template yields both, each with its own answers file and its own source for updates.
 #
-# On its own:  copier copy --trust gh:GrndZero101/python-template <destination>
-# Update:      copier update --trust -a .copier-answers.base.yml
-# --trust is required because of `_tasks` below; copier exits 4 without it.
+# Run with:  copier copy --trust gh:GrndZero101/python-template-cli-typer <destination>
+# Update:    copier update --trust                          (this layer)
+#            copier update --trust -a .copier-answers.base.yml    (the base layer)
+# Each update needs a clean working tree, and each touches only its own layer's files.
 _subdirectory: template
 
-# Not the default `.copier-answers.yml`, which belongs to the use case. Two templates on one
-# project need two answers files, or each would overwrite the other's.
-_answers_file: .copier-answers.base.yml
-
-# The use case's answers, when there is one. A missing file reads as an empty dict, so standalone
-# every `default` below falls through to its own fallback.
-_external_data:
-  use_case: .copier-answers.yml
-
-# The pyproject.toml here is a fallback for a project with none. A use case writes its own first,
-# and copier never overwrites a file listed here.
-_skip_if_exists:
-  - pyproject.toml
-
 _message_after_copy: |
-  Base layer applied to {{ _copier_conf.dst_path }}. Read CLAUDE.md first — the rules there are
-  enforced by a gate, not by convention alone.
+  Project created in {{ _copier_conf.dst_path }}.
+
+  The git repo, the venv and all three prek shims are already wired.
 
 # ---------------------------------------------------------------------------
-# Questions shared with every use case
+# Questions
 # ---------------------------------------------------------------------------
-# Each is defined in the use case's copier.yml too, and a generation test asserts the two agree.
 project_name:
   type: str
   help: Project name, as a human would write it (e.g. "Weather Tools")
-  default: "{{ _external_data.use_case.project_name | default('') }}"
-  validator: "{% if not project_name %}project_name is required{% endif %}"
 
+package_name:
+  type: str
+  help: Importable package name, under src/
+  default: "{{ project_name | lower | replace('-', '_') | replace(' ', '_') }}"
+  validator: >-
+    {% if not package_name %}package_name is required
+    {% elif not (package_name | regex_search('^[a-z_][a-z0-9_]*$')) %}
+    must be lower case, start with a letter or underscore, and contain only letters, digits
+    and underscores; got "{{ package_name }}"
+    {% endif %}
+
+script_name:
+  type: str
+  help: Console script name, the command typed in a terminal
+  default: "{{ package_name | replace('_', '-') }}"
+  # Never default to `cli`. On Windows `cli` is a read-only PowerShell alias for `Clear-Item`,
+  # and an alias wins over an executable on PATH, so the command would be unreachable from the
+  # shell most Windows users are in. It is not unique either — every generated project would
+  # install the same name into the same environment.
+  validator: >-
+    {% if not script_name %}script_name is required
+    {% elif script_name == 'cli' %}
+    `cli` is a read-only PowerShell alias for Clear-Item on Windows and would be shadowed;
+    pick something specific to this project
+    {% elif not (script_name | regex_search('^[a-z][a-z0-9-]*$')) %}
+    must be lower case and contain only letters, digits and hyphens; got "{{ script_name }}"
+    {% endif %}
+
+# Typer derives the shell-completion variable by upper-casing prog_name and replacing hyphens
+# with underscores. Computed rather than asked — it is not a decision, just a consequence.
+completion_env_var:
+  type: str
+  default: "_{{ script_name | upper | replace('-', '_') }}_COMPLETE"
+  when: false
+
+project_description:
+  type: str
+  help: One-line description
+  default: ""
+
+# Every question from here through `copyright_year` is also asked by the base template, which
+# reads these answers instead of asking again. A generation test asserts the two definitions agree.
 author_name:
   type: str
   help: Author name
-  default: "{{ _external_data.use_case.author_name | default('') }}"
 
 author_email:
   type: str
   help: Author email
-  default: "{{ _external_data.use_case.author_email | default('') }}"
 
-# A choice, not free text: the shipped code uses `typing.override`, so anything below 3.12 passes
-# its gate and then fails at import. `.python-version` is rendered from this, so the venv, the
-# tests and ty all run at the floor and prove it on every run.
+# A choice, not free text: the scaffold uses `typing.override`, so anything below 3.12 generates a
+# project that passes its gate and then fails at import. `.python-version` is rendered from this,
+# so the venv, the tests and ty all run at the floor and prove it on every run.
 python_version:
   type: str
   help: Minimum Python version
-  default: "{{ _external_data.use_case.python_version | default('3.14') }}"
+  default: "3.14"
   choices:
     - "3.12"
     - "3.13"
@@ -68,7 +92,7 @@ python_version:
 license:
   type: str
   help: Licence
-  default: "{{ _external_data.use_case.license | default('MIT') }}"
+  default: "MIT"
   choices:
     - MIT
     - Apache-2.0
@@ -77,12 +101,19 @@ license:
 copyright_holder:
   type: str
   help: Name on the copyright line
-  default: "{{ _external_data.use_case.copyright_holder | default(author_name) }}"
+  default: "{{ author_name }}"
 
 copyright_year:
   type: str
-  default: "{{ _external_data.use_case.copyright_year | default(copyright_year | default('%Y' | strftime)) }}"
+  default: "{{ copyright_year | default('%Y' | strftime) }}"
   when: false
+
+# An answer, not a constant, so the generation tests and the base's CI can point it at a local
+# checkout. It is recorded in `.copier-answers.yml`, which makes the base's origin visible.
+base_template:
+  type: str
+  help: Where the base template comes from
+  default: gh:GrndZero101/python-template
 
 # ---------------------------------------------------------------------------
 # What not to copy
@@ -98,37 +129,10 @@ _exclude:
 # ---------------------------------------------------------------------------
 # Side effects, run in the generated project
 # ---------------------------------------------------------------------------
-# The base owns every bootstrap task, so a use case need not repeat them. Each entry is a list, so
-# it is executed directly rather than through a shell — the same portability rule the template's
-# own hooks follow.
-#
-# All three prek shims are installed. `prek install` alone wires only pre-commit, which
-# silently disables the commit-message check and makes `git merge --no-ff` into main fail.
-#
-# ORDER MATTERS. The initial commit happens BEFORE the shims are installed, because the project's
-# own `no-commit-to-branch` rule would otherwise block it — a generated project starts on `main`,
-# which is exactly where that hook refuses to commit. Committing first also means `copier update`
-# has the clean tree it requires, and it gives `prek run --all-files` tracked files to look at:
-# prek sees only what git knows about, so before the first commit the whole gate reports
-# "no files to check" and passes vacuously.
-#
-# Every task is guarded to the initial copy. On `copier update` the project is already a git
-# repo with the shims installed, and re-running the commit task fails outright: by then the
-# project's own `no-commit-to-branch` hook is live and the project is on `main`, which is
-# exactly the commit that hook exists to refuse. An update therefore leaves its changes in the
-# working tree for review, which is the right behaviour anyway.
+# One task: apply the base. It owns `git init`, `uv sync`, the first commit and the prek shims, and
+# it runs after this template's files are in place, so `uv sync` finds a pyproject.toml and the
+# commit holds both layers. `--defaults` because the shared answers come from this layer's answers
+# file, not from the user. Guarded to the initial copy: an update applies the base separately.
 _tasks:
-  - command: ["git", "init", "-b", "main"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["uv", "sync"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["git", "add", "-A"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["git", "commit", "-m", "chore: generate project from python-template"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["prek", "install"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["prek", "install", "-t", "commit-msg"]
-    when: "{{ _copier_operation == 'copy' }}"
-  - command: ["prek", "install", "-t", "pre-merge-commit"]
+  - command: ["copier", "copy", "--trust", "--defaults", "{{ base_template }}", "."]
     when: "{{ _copier_operation == 'copy' }}"

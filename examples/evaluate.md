@@ -1,9 +1,9 @@
 # Review a spec run
 
 A model was given the spec named at the end of this prompt, unedited, in this project, which was
-generated fresh from the python-template copier template. Nobody steered it. Your job is to judge
-what it built, and above all to work out what the **template** should change as a result. Do not
-edit anything.
+generated fresh from the python-template-cli-typer copier template. Nobody steered it. Your job
+is to judge what it built, and above all to work out what the **template** should change as a
+result. Do not edit anything.
 
 Read, in this order:
 
