@@ -78,7 +78,7 @@ change from what was just the model.
 ### 5. Record
 
 Add a row to the results table under "Spec runs" in the base repository's
-[TODO.md](https://github.com/GrndZero101/python-template/blob/main/TODO.md), and turn each
+[TODO.md](https://github.com/GrndZero101/python-template-base/blob/main/TODO.md), and turn each
 template finding into an item in the phase it belongs to.
 
 Things worth watching for while it builds: the branch guard on the first edit, whether the gate's

@@ -84,7 +84,7 @@ jobs:
       # checkout's git state, and the update tests snapshot it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: GrndZero101/python-template
+          repository: GrndZero101/python-template-base
           path: base
           persist-credentials: false
           fetch-depth: 0

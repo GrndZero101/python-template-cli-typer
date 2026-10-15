@@ -6,7 +6,7 @@ generate a project and then run *that* project's own gate and test suite inside 
 
 A project is made in two steps by one command: copying this template renders its files, then its
 one task copies the base over them. The tests below generate through this template, as a user does.
-The base is a separate repository, python-template. `BASE_TEMPLATE_DIR` names a checkout of it, and
+The base is a separate repository, python-template-base. `BASE_TEMPLATE_DIR` names a checkout of it, and
 without that variable the tests use the base on GitHub. The base's own CI sets the variable to the
 commit under test and runs this suite, so a base change cannot break this layer unseen.
 
@@ -30,7 +30,7 @@ from pytest_copie.plugin import Copie
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Where generation finds the base template: a checkout named by the environment, else GitHub.
-BASE_TEMPLATE = os.environ.get("BASE_TEMPLATE_DIR") or "gh:GrndZero101/python-template"
+BASE_TEMPLATE = os.environ.get("BASE_TEMPLATE_DIR") or "gh:GrndZero101/python-template-base"
 
 # Every project gets every skill: data and TUI work are layered on the CLI, not chosen at generation.
 SKILLS = {
@@ -294,7 +294,7 @@ def test_generation_leaves_a_committed_repo_on_main(copie: Copie) -> None:
     status = _run(["git", "status", "--porcelain"], project)
     assert status.stdout.strip() == "", "copier update needs a clean tree"
     log = _run(["git", "log", "--oneline"], project)
-    assert "generate project from python-template" in log.stdout
+    assert "generate project from python-template-base" in log.stdout
 
 
 @requires_uv

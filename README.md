@@ -7,7 +7,7 @@ lint config and a `prek` gate — not just documented and hoped for.
 
 This is the CLI layer of a two-layer template. It supplies the typer application, its tests and the
 skills that teach a model to extend it. The other layer is the base,
-[python-template](https://github.com/GrndZero101/python-template): the rule set, a `PreToolUse`
+[python-template-base](https://github.com/GrndZero101/python-template-base): the rule set, a `PreToolUse`
 guard that refuses edits to `main`, a `PostToolUse` gate that lints on every save, a `Stop` gate
 that re-checks every changed file and runs the tests before a turn can end, `ruff`/`ty`/`rumdl`/
 `prek` configured, and a custom checker for the conventions no linter covers. Copying this
@@ -55,7 +55,7 @@ a full-screen interface is added on top of it, following the `python-data` or `p
 rather than chosen at generation.
 
 The base also works alone, for a prototype or a repo adopting the guards:
-`copier copy --trust gh:GrndZero101/python-template my-project`.
+`copier copy --trust gh:GrndZero101/python-template-base my-project`.
 
 ### Keeping it in sync with the template
 
@@ -154,7 +154,7 @@ The tests need the base template. Without configuration they use the base on Git
 against a checkout of it, for a change that depends on an unpushed base change:
 
 ```bash
-BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template uv run pytest
+BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template-base uv run pytest
 ```
 
 To look at real output rather than an assertion:

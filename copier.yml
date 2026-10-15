@@ -113,7 +113,7 @@ copyright_year:
 base_template:
   type: str
   help: Where the base template comes from
-  default: gh:GrndZero101/python-template
+  default: gh:GrndZero101/python-template-base
 
 # ---------------------------------------------------------------------------
 # What not to copy

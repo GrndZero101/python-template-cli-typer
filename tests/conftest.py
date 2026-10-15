@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-BASE_REPOSITORY = "https://github.com/GrndZero101/python-template"
+BASE_REPOSITORY = "https://github.com/GrndZero101/python-template-base"
 
 
 @pytest.fixture(scope="session")
@@ -20,7 +20,7 @@ def base_checkout(tmp_path_factory: pytest.TempPathFactory) -> Path:
     named = os.environ.get("BASE_TEMPLATE_DIR")
     if named:
         return Path(named)
-    destination = tmp_path_factory.mktemp("base") / "python-template"
+    destination = tmp_path_factory.mktemp("base") / "python-template-base"
     cloned = subprocess.run(
         ["git", "clone", "--quiet", BASE_REPOSITORY, str(destination)],
         capture_output=True,
