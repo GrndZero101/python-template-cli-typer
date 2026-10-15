@@ -1,12 +1,17 @@
-# CI for the TEMPLATE REPOSITORY. A generated project gets its own workflow, not this one.
+# CI for the CLI TEMPLATE REPOSITORY. A generated project gets its own workflow, not this one.
 #
 # Two jobs, mirroring the two halves of the local gate:
 #
-# - `gate` runs the root's prek config on Linux: its markdown, its one test module and the
-#   conventions check. `generation-tests` is skipped there because the next job is that suite.
-# - `generation` runs tests/test_template.py on Linux, Windows and macOS. It generates projects and
-#   runs each one's own gate and tests, so it is the only place the portability rules in
-#   template/CLAUDE.md are checked on a real Windows or macOS, rather than by convention or WSL.
+# - `gate` runs this repo's prek config on Linux: its markdown, its one test module and the commit
+#   rules. `generation-tests` is skipped there because the next job is that suite.
+# - `generation` runs tests/test_template.py on Linux, Windows and macOS. It generates projects —
+#   this layer with the base layered on — and runs each one's own gate and tests, so it is the only
+#   place the portability rules in the base's CLAUDE.md are checked on a real Windows or macOS,
+#   rather than by convention or WSL.
+#
+# The base template is a separate repository. This workflow checks out its `main` into `base/` and
+# points the suite at it through BASE_TEMPLATE_DIR. The base's own CI does the reverse: it checks
+# out this repo and runs this suite against the base commit under test.
 #
 # The repo is public, so GitHub-hosted runners cost nothing on any OS. Actions are pinned by
 # commit SHA with the release in a comment; a tag can be moved, a SHA cannot.
@@ -17,16 +22,13 @@ name: CI
 # There is no pull_request trigger — work arrives by merge into main, never by PR.
 #
 # Only a push that can change the result runs: the paths `generation-tests` in
-# .pre-commit-config.yaml lists — keep the two in step — plus the root gate's config and this
-# file. An allow-list, not `paths-ignore: ["**.md"]`: markdown under template/ ships, and a
-# generated project's gate checks it. A push touching only TODO.md, README.md, CLAUDE.md or
-# examples/ runs nothing; the commit hooks have already checked that markdown locally. Run the
-# workflow by hand (workflow_dispatch) to force a run.
+# .pre-commit-config.yaml lists — keep the two in step — plus the gate's config and this file. An
+# allow-list, not `paths-ignore: ["**.md"]`: markdown under template/ ships, and a generated
+# project's gate checks it. Run the workflow by hand (workflow_dispatch) to force a run.
 on:
   push:
     paths:
       - "template/**"
-      - "use-cases/**"
       - "tests/**"
       - "copier.yml"
       - "pyproject.toml"
@@ -70,11 +72,21 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      BASE_TEMPLATE_DIR: ${{ github.workspace }}/base
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The update tests clone this checkout and move it forward, as a developer's clone would.
+          # The update tests snapshot this checkout and move it forward, as a developer's clone would.
+          fetch-depth: 0
+      # The base at its `main`. Full history: generating from a local path makes copier read the
+      # checkout's git state, and the update tests snapshot it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: GrndZero101/python-template
+          path: base
+          persist-credentials: false
           fetch-depth: 0
       # No `python-version` input: it exports UV_PYTHON, which would override every generated
       # project's .python-version and quietly turn the 3.12 floor test into a 3.14 one.

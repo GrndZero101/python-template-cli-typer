@@ -5,12 +5,6 @@ __pycache__/
 # Environments
 .venv/
 
-# Deliberate override for the PreToolUse branch guard (see CLAUDE.md > Branching)
-.allow-main-edit
-
-# One line per gate run, read by the benchmark (see tools/gate_log.py)
-.gate.log
-
 # Tool caches
 .ruff_cache/
 .pytest_cache/

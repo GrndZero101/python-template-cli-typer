@@ -1,14 +1,17 @@
-# python-template
+# python-template-cli-typer
 
-A [copier](https://copier.readthedocs.io/) template for Python projects built around one idea:
-every rule in the generated `CLAUDE.md` exists so a human (or an AI agent) can stop the program and
-inspect it. Structure, debuggability and portability rules are mechanically enforced by lint config
-and a `prek` gate — not just documented and hoped for.
+A [copier](https://copier.readthedocs.io/) template for a Python command-line tool, built around one
+idea: every rule in the generated `CLAUDE.md` exists so a human (or an AI agent) can stop the
+program and inspect it. Structure, debuggability and portability rules are mechanically enforced by
+lint config and a `prek` gate — not just documented and hoped for.
 
-Generated projects get: the rule set, a `PreToolUse` guard that refuses edits to `main`, a
-`PostToolUse` gate that lints on every save, a `Stop` gate that re-checks every changed file and
-runs the tests before a turn can end, `ruff`/`ty`/`rumdl`/`prek` configured, a custom checker
-for the conventions no linter covers, and the Claude Code skills matching the stack you pick.
+This is the CLI layer of a two-layer template. It supplies the typer application, its tests and the
+skills that teach a model to extend it. The other layer is the base,
+[python-template](https://github.com/GrndZero101/python-template): the rule set, a `PreToolUse`
+guard that refuses edits to `main`, a `PostToolUse` gate that lints on every save, a `Stop` gate
+that re-checks every changed file and runs the tests before a turn can end, `ruff`/`ty`/`rumdl`/
+`prek` configured, and a custom checker for the conventions no linter covers. Copying this
+template applies the base too, so one command yields both.
 
 ## Prerequisites
 
@@ -23,19 +26,10 @@ uv tool install prek
 
 ## Path A — start a new project from this template
 
-The template is two layers: the **base** (this repo's root: the hooks, the gate, `CLAUDE.md`, the
-shared skills) and a **use case** layered on it. `use-cases/cli-typer/` is the typer CLI, and
-copying it applies the base to the same directory. Until the use case has a repository of its own,
-copy it from a clone:
-
 ```bash
-git clone https://github.com/GrndZero101/python-template
-copier copy --trust python-template/use-cases/cli-typer my-project     # answer the prompts
+copier copy --trust gh:GrndZero101/python-template-cli-typer my-project     # answer the prompts
 cd my-project
 ```
-
-The base also works alone, for a prototype or a repo adopting the guards:
-`copier copy --trust gh:GrndZero101/python-template my-project`.
 
 `--trust` is required because the template declares `_tasks` — the ones that run `git init`,
 `uv sync` and install the shims. Without it copier exits 4 with "Template uses potentially unsafe
@@ -60,12 +54,14 @@ environment variable, then config file, then default. A command that crunches da
 a full-screen interface is added on top of it, following the `python-data` or `python-tui` skill,
 rather than chosen at generation.
 
+The base also works alone, for a prototype or a repo adopting the guards:
+`copier copy --trust gh:GrndZero101/python-template my-project`.
+
 ### Keeping it in sync with the template
 
 A project records two sources, so an update is two commands, each on a clean tree and each touching
-only its own layer's files: `copier update --trust` for the use case, and
-`copier update --trust -a .copier-answers.base.yml` for the base. Run the second the same way as
-the first.
+only its own layer's files: `copier update --trust` for this layer, and
+`copier update --trust -a .copier-answers.base.yml` for the base.
 
 ```bash
 git status --short                    # must be clean; copier refuses otherwise
@@ -77,9 +73,9 @@ git diff                              # review; nothing is committed for you
 prek run --all-files
 uv run pytest
 git add -A                            # -A, not -a: the template may have added files
-git commit -m "chore(template): update to python-template <commit>"
+git commit -m "chore(template): update to python-template-cli-typer <commit>"
 git switch main
-git merge --no-ff -m "chore(template): update to python-template <commit>" chore/template-update
+git merge --no-ff -m "chore(template): update to python-template-cli-typer <commit>" chore/template-update
 git branch -d chore/template-update
 ```
 
@@ -122,7 +118,7 @@ To pin a version, or to move deliberately, pass a commit. The template has no re
 once it does, `copier update` moves to the latest tag rather than the newest commit.
 
 ```bash
-copier copy --trust --vcs-ref <commit> gh:GrndZero101/python-template my-project
+copier copy --trust --vcs-ref <commit> gh:GrndZero101/python-template-cli-typer my-project
 copier update --trust --vcs-ref <commit>
 ```
 
@@ -133,8 +129,8 @@ Do not delete `.copier-answers.yml` — `copier update` reads it to know what yo
 ## Path B — work on the template itself
 
 ```bash
-git clone https://github.com/GrndZero101/python-template
-cd python-template
+git clone https://github.com/GrndZero101/python-template-cli-typer
+cd python-template-cli-typer
 uv sync
 prek install -t pre-commit -t commit-msg -t pre-merge-commit
 ```
@@ -143,10 +139,10 @@ All three shims are required. `prek install` alone wires only `pre-commit`, whic
 the commit-message check and breaks `--no-ff` merges into `main`.
 
 ```bash
-git switch -c feat/whatever    # never edit on main; a hook enforces it
+git switch -c feat/whatever    # never edit on main; nothing here enforces it for you
 ```
 
-Edit under `template/` (the base) or `use-cases/cli-typer/template/`, then:
+Edit under `template/`, then:
 
 ```bash
 uv run pytest                   # generate projects, run their gate and suite
@@ -154,27 +150,33 @@ uv run pytest -k gate           # only the generated project's gate, while itera
 prek run --all-files            # the whole gate, generation tests included
 ```
 
+The tests need the base template. Without configuration they use the base on GitHub; to test
+against a checkout of it, for a change that depends on an unpushed base change:
+
+```bash
+BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template uv run pytest
+```
+
 To look at real output rather than an assertion:
 
 ```bash
 copier copy --trust --defaults -d project_name=Scratch -d package_name=scratch \
-  -d base_template="$PWD" use-cases/cli-typer /tmp/scratch
+  -d base_template="$BASE_TEMPLATE_DIR" . /tmp/scratch
 ```
 
-**The templates cannot be linted or run where they sit** — they hold Jinja and have no
-`pyproject.toml`. The generation tests are the only thing that verifies them, which is why they are
+**The template cannot be linted or run where it sits** — it holds Jinja and has no
+`pyproject.toml`. The generation tests are the only thing that verifies it, which is why they are
 wired into the gate.
 See [CLAUDE.md](CLAUDE.md) for why, and for the branching and merge rules.
 
 ## Layout
 
-- **`template/`** — the base layer: everything every generated project receives.
-- **`copier.yml`** — the base's questions, exclusions and bootstrap tasks.
-- **`use-cases/cli-typer/`** — the CLI layer, with its own `copier.yml` and `template/`.
+- **`template/`** — the CLI layer: what a generated project receives from this repo.
+- **`copier.yml`** — this layer's questions and its one task, which applies the base.
 - **`tests/test_template.py`** — generates projects and runs their gates. The only check on the
-  templates.
+  template.
+- **`examples/`** — specs for building a CLI on the scaffold, to measure whether the skills carry.
 - **`.pre-commit-config.yaml`** — the gate for this repository.
-- **`TODO.md`** — outstanding work.
 
 ## License
 

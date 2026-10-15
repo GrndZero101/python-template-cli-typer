@@ -1,13 +1,14 @@
-"""Generation tests for the copier templates.
+"""Generation tests for the CLI template and its contract with the base template.
 
-These are the only thing that verifies `template/` (the base) and `use-cases/cli-typer/template/`
-(the CLI layer). They hold Jinja expressions and no `pyproject.toml`, so they cannot be linted,
-type-checked or run where they sit — the check is to generate a project and then run *that*
-project's own gate and test suite inside it.
+These are the only thing that verifies `template/` (the CLI layer). It holds Jinja expressions and
+no `pyproject.toml`, so it cannot be linted, type-checked or run where it sits — the check is to
+generate a project and then run *that* project's own gate and test suite inside it.
 
-A project is made in two steps by one command: copying the use case renders its files, then its one
-task copies the base over them. The tests below generate through the use case, as a user does, and
-point `base_template` at this checkout so the base under test is the working tree.
+A project is made in two steps by one command: copying this template renders its files, then its
+one task copies the base over them. The tests below generate through this template, as a user does.
+The base is a separate repository, python-template. `BASE_TEMPLATE_DIR` names a checkout of it, and
+without that variable the tests use the base on GitHub. The base's own CI sets the variable to the
+commit under test and runs this suite, so a base change cannot break this layer unseen.
 
 Not offline: generation runs `uv sync`, which reaches the network on a cold cache. Everything
 else is deterministic — fixed answers, a fresh tmp directory per test, no clock and no rng.
@@ -27,7 +28,9 @@ import yaml
 from pytest_copie.plugin import Copie
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-USE_CASE_DIR = REPO_ROOT / "use-cases" / "cli-typer"
+
+# Where generation finds the base template: a checkout named by the environment, else GitHub.
+BASE_TEMPLATE = os.environ.get("BASE_TEMPLATE_DIR") or "gh:GrndZero101/python-template"
 
 # Every project gets every skill: data and TUI work are layered on the CLI, not chosen at generation.
 SKILLS = {
@@ -86,14 +89,6 @@ SCRIPT_NAME = "weather-tools"
 # The lowest `python_version` copier.yml offers. Every other test generates at the default.
 PYTHON_FLOOR = "3.12"
 
-# What the base asks when it is applied on its own: the questions the two layers share.
-SHARED_ANSWERS = {
-    "project_name": "Weather Tools",
-    "author_name": "A Dev",
-    "author_email": "dev@example.com",
-    "python_version": "3.14",
-}
-
 BASE_ANSWERS = {
     "project_name": "Weather Tools",
     "package_name": PACKAGE_NAME,
@@ -132,8 +127,8 @@ def _generate(
     need so they can move either one forward without committing to the real repo.
     """
     answers = _answers(python_version, **overrides)
-    answers["base_template"] = str(base_dir or REPO_ROOT)
-    result = copie.copy(extra_answers=answers, template_dir=use_case_dir or USE_CASE_DIR)
+    answers["base_template"] = str(base_dir or BASE_TEMPLATE)
+    result = copie.copy(extra_answers=answers, template_dir=use_case_dir or REPO_ROOT)
     assert result.exception is None, f"copier raised: {result.exception}"
     assert result.exit_code == 0, f"copier exited {result.exit_code}"
     assert result.project_dir is not None
@@ -163,7 +158,7 @@ def _snapshot(source: Path, destination: Path, name: str, *pathspecs: str) -> Pa
     `copier update` compares the commit recorded in the answers file against a newer ref, so a
     meaningful test needs a template it can actually move forward, and one that is a git repo root:
     copier records no commit for a plain directory. A use case lives in a subdirectory here, so it
-    needs this even though the base could be cloned. Uncommitted changes are included, because the
+    needs this even though the checkout is a git repo. Uncommitted changes are included, because the
     pre-commit hook runs these tests before the commit that would hold them.
     """
     snapshot = destination / name
@@ -184,14 +179,14 @@ def _snapshot(source: Path, destination: Path, name: str, *pathspecs: str) -> Pa
     return snapshot
 
 
-def _snapshot_base(destination: Path) -> Path:
+def _snapshot_base(base_checkout: Path, destination: Path) -> Path:
     """Snapshot the base template: `copier.yml` and everything it generates from."""
-    return _snapshot(REPO_ROOT, destination, "base-snapshot", "copier.yml", "template")
+    return _snapshot(base_checkout, destination, "base-snapshot", "copier.yml", "template")
 
 
 def _snapshot_use_case(destination: Path) -> Path:
-    """Snapshot the CLI use case, which becomes its own repo's root once it is split out."""
-    return _snapshot(USE_CASE_DIR, destination, "use-case-snapshot")
+    """Snapshot this repo's template: `copier.yml` and everything it generates from."""
+    return _snapshot(REPO_ROOT, destination, "use-case-snapshot", "copier.yml", "template")
 
 
 def _commit_all(repo: Path, message: str) -> None:
@@ -323,24 +318,6 @@ def test_the_use_case_keeps_the_pyproject_it_wrote(copie: Copie) -> None:
     assert (project / "ruff-base.toml").is_file()
 
 
-@requires_uv
-@requires_prek
-def test_the_base_alone_is_a_project_that_passes_its_gate(copie: Copie) -> None:
-    """A prototype or a brownfield repo adopts the base with no use case: its fallback must hold."""
-    result = copie.copy(extra_answers=SHARED_ANSWERS, template_dir=REPO_ROOT)
-    assert result.exception is None, f"copier raised: {result.exception}"
-    assert result.project_dir is not None
-    project = result.project_dir
-    assert (project / ".copier-answers.base.yml").is_file()
-    assert not (project / ".copier-answers.yml").exists()
-    assert not (project / "src").exists(), "the base alone must ship no source"
-    _assert_pyproject_serves_the_base(project / "pyproject.toml")
-    gate = _run(["prek", "run", "--all-files", "--skip", "no-commit-to-branch"], project)
-    assert gate.returncode == 0, f"{gate.stdout}\n{gate.stderr}"
-    tests = _run(["uv", "run", "python", "-m", "pytest", "-q"], project)
-    assert tests.returncode == 0, f"{tests.stdout}\n{tests.stderr}"
-
-
 # --- the licence ---------------------------------------------------------------------------
 
 HOLDER = "Acme Ltd"
@@ -386,13 +363,15 @@ def test_the_holder_defaults_to_the_author_and_the_licence_to_mit(copie: Copie) 
 
 @requires_uv
 @requires_copier
-def test_update_keeps_the_year_it_recorded(copie: Copie, tmp_path: Path) -> None:
+def test_update_keeps_the_year_it_recorded(
+    copie: Copie, tmp_path: Path, base_checkout: Path
+) -> None:
     """A computed answer is recomputed on every update unless the recipe locks it (D14).
 
     The answers file is edited to a year the clock cannot produce, so a recomputed year is
     distinguishable from a kept one without waiting for New Year.
     """
-    base = _snapshot_base(tmp_path)
+    base = _snapshot_base(base_checkout, tmp_path)
     project = _generate(copie, base_dir=base)
     for name in (".copier-answers.yml", ".copier-answers.base.yml"):
         answers = project / name
@@ -435,15 +414,15 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def test_the_layers_render_no_file_in_common() -> None:
+def test_the_layers_render_no_file_in_common(base_checkout: Path) -> None:
     """A path both layers render conflicts on update, with markers in the file.
 
     Only what the base lists under `_skip_if_exists` may overlap: copier never overwrites it and
     leaves it out of the update patch, so the use case's version always wins.
     """
-    base = _rendered_paths(REPO_ROOT / "template")
-    use_case = _rendered_paths(USE_CASE_DIR / "template")
-    skipped = set(_load_yaml(REPO_ROOT / "copier.yml")["_skip_if_exists"])
+    base = _rendered_paths(base_checkout / "template")
+    use_case = _rendered_paths(REPO_ROOT / "template")
+    skipped = set(_load_yaml(base_checkout / "copier.yml")["_skip_if_exists"])
     shared = (base & use_case) - skipped
     assert shared == set(), f"rendered by both layers: {sorted(shared)}; give each file one owner"
     assert skipped <= use_case, "a `_skip_if_exists` file the use case does not write is not shared"
@@ -455,14 +434,14 @@ def _questions(copier_yml: Path) -> dict[str, dict[str, Any]]:
     return {key: value for key, value in config.items() if not key.startswith("_")}
 
 
-def test_the_layers_define_the_shared_questions_alike() -> None:
+def test_the_layers_define_the_shared_questions_alike(base_checkout: Path) -> None:
     """The base asks what the use case did not, so a drift here asks a user twice or not at all.
 
     The base falls back to a use case's answer, so its `default` differs by design; what must
     agree is the question itself: its type, its help text and its choices.
     """
-    base = _questions(REPO_ROOT / "copier.yml")
-    use_case = _questions(USE_CASE_DIR / "copier.yml")
+    base = _questions(base_checkout / "copier.yml")
+    use_case = _questions(REPO_ROOT / "copier.yml")
     missing = sorted(set(base) - set(use_case))
     assert missing == [], f"base questions the use case does not ask: {missing}"
     for name, question in base.items():
@@ -471,13 +450,13 @@ def test_the_layers_define_the_shared_questions_alike() -> None:
 
 
 @requires_uv
-def test_the_answers_files_agree_on_the_shared_questions(copie: Copie) -> None:
+def test_the_answers_files_agree_on_the_shared_questions(copie: Copie, base_checkout: Path) -> None:
     """Generated, the base must have recorded exactly what the use case did."""
     project = _generate(copie)
     base = _load_yaml(project / ".copier-answers.base.yml")
     use_case = _load_yaml(project / ".copier-answers.yml")
     shared = {key for key in base if not key.startswith("_")}
-    assert shared == set(_questions(REPO_ROOT / "copier.yml"))
+    assert shared == set(_questions(base_checkout / "copier.yml"))
     for name in sorted(shared):
         assert base[name] == use_case[name], (
             f"{name}: base {base[name]!r}, use case {use_case[name]!r}"
@@ -705,9 +684,9 @@ def _append(path: Path, text: str) -> None:
 @requires_uv
 @requires_copier
 def test_update_pulls_a_later_base_change_into_an_existing_project(
-    copie: Copie, tmp_path: Path
+    copie: Copie, tmp_path: Path, base_checkout: Path
 ) -> None:
-    base = _snapshot_base(tmp_path)
+    base = _snapshot_base(base_checkout, tmp_path)
     project = _generate(copie, base_dir=base)
     assert MARKER not in (project / "CLAUDE.md").read_text(encoding="utf-8")
 
@@ -741,9 +720,11 @@ def test_update_preserves_a_file_the_project_has_edited(copie: Copie, tmp_path: 
 
 @requires_uv
 @requires_copier
-def test_each_layer_updates_only_its_own_files(copie: Copie, tmp_path: Path) -> None:
+def test_each_layer_updates_only_its_own_files(
+    copie: Copie, tmp_path: Path, base_checkout: Path
+) -> None:
     """D12's claim: a base fix reaches a project without a use-case release, and the reverse."""
-    base = _snapshot_base(tmp_path)
+    base = _snapshot_base(base_checkout, tmp_path)
     use_case = _snapshot_use_case(tmp_path)
     project = _generate(copie, use_case_dir=use_case, base_dir=base)
 
@@ -768,8 +749,10 @@ def test_each_layer_updates_only_its_own_files(copie: Copie, tmp_path: Path) -> 
 @requires_uv
 @requires_prek
 @requires_copier
-def test_a_project_still_passes_its_gate_after_updating(copie: Copie, tmp_path: Path) -> None:
-    base = _snapshot_base(tmp_path)
+def test_a_project_still_passes_its_gate_after_updating(
+    copie: Copie, tmp_path: Path, base_checkout: Path
+) -> None:
+    base = _snapshot_base(base_checkout, tmp_path)
     project = _generate(copie, base_dir=base)
 
     _append(base / "template" / "CLAUDE.md", f"\n{MARKER}\n")
