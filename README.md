@@ -48,6 +48,25 @@ You will be asked for: project name, package name, console script name, descript
 and email, minimum Python version (3.12, 3.13 or 3.14), licence (MIT, Apache-2.0 or Proprietary)
 and the name on its copyright line.
 
+**Answer your name and email once.** Copier reads a personal settings file and offers its
+`defaults` as the default answer to any question of the same name, in every template. It lives at
+`~/.config/copier/settings.yml` on Linux and `~/Library/Application Support/copier/settings.yml`
+on macOS, or wherever `COPIER_SETTINGS_PATH` says. To fill it from your git identity, if you have
+none yet (on macOS, use that path instead):
+
+```bash
+mkdir -p ~/.config/copier
+cat > ~/.config/copier/settings.yml <<EOF
+defaults:
+  author_name: "$(git config user.name)"
+  author_email: "$(git config user.email)"
+EOF
+```
+
+You are still asked; the file only changes what Enter accepts. An update keeps the answers you
+recorded and ignores it. For an email that stays private, use GitHub's noreply address,
+`<id>+<username>@users.noreply.github.com`, shown under Settings > Emails.
+
 Every project is a CLI on typer, pydantic-settings, rich and loguru, with a scaffold: one
 placeholder `about` command, with global and command flags that each resolve flag, then
 environment variable, then config file, then default. A command that crunches data files or draws
