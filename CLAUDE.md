@@ -70,8 +70,10 @@ Copier includes uncommitted working-tree changes when a template is a local path
 
 The base's own CI checks this repo out and runs this suite against the base commit under test, so a
 base change that breaks this layer fails there. This repo's CI does the reverse and checks out the
-base's `main` into `base/`. Both run on Linux, Windows and macOS; the Windows and macOS jobs are the
-only check of the portability rules away from WSL, so do not trim the matrix.
+base's `main` into `base/`. Both run on Linux and macOS on a push, and on Windows only on a manual run:
+`gh workflow run ci.yml --ref <branch> -f windows=true`. The targets are Unix-alikes and Windows is
+slow, so it is checked at milestones and in work aimed at it; that run is the only check of the
+portability rules away from a Unix-alike.
 
 ## Commands
 

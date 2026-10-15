@@ -4,10 +4,10 @@
 #
 # - `gate` runs this repo's prek config on Linux: its markdown, its one test module and the commit
 #   rules. `generation-tests` is skipped there because the next job is that suite.
-# - `generation` runs tests/test_template.py on Linux, Windows and macOS. It generates projects —
-#   this layer with the base layered on — and runs each one's own gate and tests, so it is the only
-#   place the portability rules in the base's CLAUDE.md are checked on a real Windows or macOS,
-#   rather than by convention or WSL.
+# - `generation` runs tests/test_template.py on Linux and macOS, and on Windows when a manual run
+#   asks for it. It generates projects — this layer with the base layered on — and runs each one's
+#   own gate and tests, so it is the only place the portability rules in the base's CLAUDE.md are
+#   checked on a real Windows or macOS, rather than by convention or WSL.
 #
 # The base template is a separate repository. This workflow checks out its `main` into `base/` and
 # points the suite at it through BASE_TEMPLATE_DIR. The base's own CI does the reverse: it checks
@@ -18,7 +18,8 @@
 
 name: CI
 
-# Every branch, not just main: pushing a branch is how to see Windows and macOS before merging.
+# Every branch, not just main: pushing a branch is how to see macOS before merging, and a manual
+# run with `windows` ticked is how to see Windows.
 # There is no pull_request trigger — work arrives by merge into main, never by PR.
 #
 # Only a push that can change the result runs: the paths `generation-tests` in
@@ -36,6 +37,11 @@ on:
       - ".pre-commit-config.yaml"
       - ".github/workflows/**"
   workflow_dispatch:
+    inputs:
+      windows:
+        description: Also run the generation suite on Windows
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -69,7 +75,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Windows only on a manual run that asks for it: the targets are Unix-alikes, and Windows
+        # took ten times Linux's minutes. `inputs` is empty on a push, so a push runs two.
+        # gh workflow run ci.yml --ref <branch> -f windows=true
+        os: ${{ fromJSON(inputs.windows && '["ubuntu-latest", "macos-latest", "windows-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
