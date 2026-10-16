@@ -40,6 +40,7 @@ SKILLS = {
     "python-data",
     "python-debug",
     "python-tui",
+    "python-uv-script",
 }
 
 # What a generated project's src/ and tests/ hold, compared as whole sets.
@@ -523,6 +524,9 @@ def _assert_pyproject_serves_the_base(pyproject: Path) -> None:
     assert "error" in pytest_options["filterwarnings"], "a deprecation must fail the test"
     assert "tools/tests" in pytest_options["testpaths"], "the hooks' tests would never run"
     assert "tools" in pytest_options["pythonpath"], "the hooks' tests could not import them"
+    assert "." in pytest_options["pythonpath"], (
+        "a test could not import a uv script as scripts.<name>"
+    )
     assert "tools" in tool["ty"]["environment"]["extra-paths"], "ty cannot resolve tools/"
     assert ".claude" in tool["ty"]["src"]["exclude"], "ty would check skill reference code"
     ruff = tool["ruff"]
