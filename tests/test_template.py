@@ -405,6 +405,26 @@ def test_update_keeps_the_year_it_recorded(
     )
 
 
+# --- CI -----------------------------------------------------------------------------------
+
+WORKFLOW = Path(".github") / "workflows" / "ci.yml"
+
+
+@requires_uv
+def test_the_ci_answer_reaches_the_base(copie: Copie) -> None:
+    """D17: this layer asks `ci`, and the base, which renders the workflow, must act on it.
+
+    The base runs under `--defaults`, so a question only it asked would always take `none`.
+    """
+    assert (_generate(copie, ci="github") / WORKFLOW).is_file()
+
+
+@requires_uv
+def test_ci_defaults_to_none_and_ships_no_workflow(copie: Copie) -> None:
+    project = _generate(copie)
+    assert not (project / ".github").exists()
+
+
 # --- the contract between the layers ------------------------------------------------------
 #
 # Two templates on one project only work if they stay apart where they must and agree where they
@@ -473,6 +493,7 @@ defaults:
   license: Proprietary
   copyright_holder: From Settings
   copyright_year: "1999"
+  ci: github
 """
 
 
@@ -549,8 +570,11 @@ def test_the_use_case_pyproject_holds_what_the_base_relies_on(copie: Copie) -> N
 @requires_uv
 @requires_prek
 def test_generated_project_passes_its_own_gate(copie: Copie) -> None:
-    """The real test. `no-commit-to-branch` is skipped because generation leaves us on main."""
-    project = _generate(copie)
+    """The real test. `no-commit-to-branch` is skipped because generation leaves us on main.
+
+    `ci: github`, so the shipped workflow is part of what the gate checks.
+    """
+    project = _generate(copie, ci="github")
     gate = _run(
         ["prek", "run", "--all-files", "--skip", "no-commit-to-branch"],
         project,
