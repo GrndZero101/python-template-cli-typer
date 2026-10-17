@@ -83,24 +83,27 @@ separately, touching only its own files:
 
 | Layer | Answers file | Command |
 |---|---|---|
-| This one, the CLI | `.copier-answers.yml` | `copier update --trust` |
 | The base | `.copier-answers.base.yml` | `copier update --trust -a .copier-answers.base.yml` |
+| This one, the CLI | `.copier-answers.yml` | `copier update --trust` |
 
-Run both, this layer first. Each needs a clean tree, so commit between them:
+Run both, the base first: a pin can have a copy in each layer, and the base's are the ones that
+must not lag. This layer's `required-version` is the `uv` floor, while the base's `uv-pre-commit`
+rev is the `uv` that the commit's `uv-lock` hook runs, so raising the floor first refuses that
+hook. Each update needs a clean tree, so commit between them:
 
 ```bash
 git status --short                    # must be clean; copier refuses otherwise
 git switch -c chore/template-update   # branch first; main takes no direct commits
 
-copier update --trust                 # this layer: a three-way merge into the working tree
+copier update --trust -a .copier-answers.base.yml   # the base: a three-way merge into the tree
 # resolve conflicts, if any (below)
 uv sync                               # before any check; see below
 git diff                              # review; nothing is committed for you
 git add -A                            # -A, not -a: the template may have added files
-git commit -m "chore(template): update python-template-cli-typer to <commit>"
+git commit -m "chore(template): update python-template-base to <commit>"
 
-copier update --trust -a .copier-answers.base.yml
-# resolve, sync, review and commit as above, naming python-template-base
+copier update --trust                 # this layer
+# resolve, sync, review and commit as above, naming python-template-cli-typer
 
 uv run python tools/finish_branch.py "chore(template): update from the templates"
 ```

@@ -155,17 +155,18 @@ An editable install reports the version it was installed at until it is reinstal
 The project comes from two templates, and each updates separately, touching only its own files:
 the CLI layer (`src/`, `tests/`, `pyproject.toml`, this README), recorded in
 `.copier-answers.yml`, and the base under it (`CLAUDE.md`, `tools/`, the hooks, the shared
-skills), recorded in `.copier-answers.base.yml`. Run both, the CLI layer first. Each needs a clean
-tree, so commit between them:
+skills), recorded in `.copier-answers.base.yml`. Run both, the base first, so its pins never lag
+the CLI layer's: the `uv` floor in `pyproject.toml` must not rise above the `uv-pre-commit` rev in
+`.pre-commit-config.yaml`. Each needs a clean tree, so commit between them:
 
 ```bash
 git switch -c chore/template-update
-copier update --trust                                 # the CLI layer
-# resolve conflicts, if any; then:
-uv sync && git add -A && git commit -m "chore(template): update the cli layer"
 copier update --trust -a .copier-answers.base.yml     # the base
 # resolve conflicts, if any; then:
 uv sync && git add -A && git commit -m "chore(template): update the base"
+copier update --trust                                 # the CLI layer
+# resolve conflicts, if any; then:
+uv sync && git add -A && git commit -m "chore(template): update the cli layer"
 uv run python tools/finish_branch.py "chore(template): update from the templates"
 ```
 

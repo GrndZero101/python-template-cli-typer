@@ -875,12 +875,12 @@ def test_the_setup_helper_updates_both_layers_on_a_branch(
     assert MARKER in (project / "CLAUDE.md").read_text(encoding="utf-8")
     assert MARKER in (project / "README.md").read_text(encoding="utf-8")
     assert _run(["git", "branch", "--show-current"], project).stdout.strip() == HELPER_BRANCH
-    # Newest first: the use case updates first, and each commit names its template's directory.
+    # Newest first: the base updates first, and each commit names its template's directory.
     commits = _run(["git", "log", "--format=%s", f"main..{HELPER_BRANCH}"], project)
     subjects = [subject.rsplit(" to ", 1)[0] for subject in commits.stdout.splitlines()]
     assert subjects == [
-        f"chore(template): update {base.name}",
         f"chore(template): update {use_case.name}",
+        f"chore(template): update {base.name}",
     ], commits.stdout
     assert _run(["git", "status", "--porcelain"], project).stdout == ""
 
