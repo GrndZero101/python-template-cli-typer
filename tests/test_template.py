@@ -824,6 +824,67 @@ def test_a_project_still_passes_its_gate_after_updating(
     assert gate.returncode == 0, f"{gate.stdout}\n{gate.stderr}"
 
 
+# The base's setup helper runs the two updates above as one command: `bootstrap.py update`.
+
+HELPER_BRANCH = "chore/template-update"
+
+
+def _uv_tools() -> set[str]:
+    """Return the names `uv tool list` shows, which is where the helper's doctor looks."""
+    listed = subprocess.run(["uv", "tool", "list"], capture_output=True, text=True, check=False)
+    lines = listed.stdout.splitlines() if listed.returncode == 0 else []
+    return {line.split(maxsplit=1)[0] for line in lines if line and not line.startswith("-")}
+
+
+def _run_helper_update(
+    helper: Path, project: Path, gitconfig: Path
+) -> subprocess.CompletedProcess[str]:
+    """Run `bootstrap.py update` on `project` as the shim would hand off to it, with `--defaults`.
+
+    The helper's doctor reads git's identity with `git config`, which never sees the GIT_AUTHOR_*
+    variables CI sets, so it gets a global config file of its own.
+    """
+    env = {**os.environ, "GIT_CONFIG_GLOBAL": str(gitconfig)}
+    command = ["uv", "run", "--script", str(helper), "update", str(project), "--", "--defaults"]
+    return subprocess.run(
+        command, cwd=gitconfig.parent, env=env, capture_output=True, text=True, check=False
+    )
+
+
+@requires_uv
+@requires_prek
+@requires_copier
+def test_the_setup_helper_updates_both_layers_on_a_branch(
+    copie: Copie, tmp_path: Path, base_checkout: Path
+) -> None:
+    """One commit per layer, made through the project's own hooks, on a branch, and main untouched."""
+    if not ON_CI and not {"copier", "prek"} <= _uv_tools():
+        pytest.skip("the helper's doctor needs copier and prek as uv tools: uv tool install")
+    base = _snapshot_base(base_checkout, tmp_path)
+    use_case = _snapshot_use_case(tmp_path)
+    project = _generate(copie, use_case_dir=use_case, base_dir=base)
+    _append(base / "template" / "CLAUDE.md", f"\n{MARKER}\n")
+    _commit_all(base, "docs: change the base")
+    _append(use_case / "template" / "README.md.jinja", f"\n{MARKER}\n")
+    _commit_all(use_case, "docs: change the use case")
+    gitconfig = tmp_path / "gitconfig"
+    gitconfig.write_text("[user]\n\tname = A Dev\n\temail = dev@example.com\n", encoding="utf-8")
+
+    updated = _run_helper_update(base_checkout / "bootstrap.py", project, gitconfig)
+    assert updated.returncode == 0, updated.stdout + updated.stderr
+    assert MARKER in (project / "CLAUDE.md").read_text(encoding="utf-8")
+    assert MARKER in (project / "README.md").read_text(encoding="utf-8")
+    assert _run(["git", "branch", "--show-current"], project).stdout.strip() == HELPER_BRANCH
+    # Newest first: the use case updates first, and each commit names its template's directory.
+    commits = _run(["git", "log", "--format=%s", f"main..{HELPER_BRANCH}"], project)
+    subjects = [subject.rsplit(" to ", 1)[0] for subject in commits.stdout.splitlines()]
+    assert subjects == [
+        f"chore(template): update {base.name}",
+        f"chore(template): update {use_case.name}",
+    ], commits.stdout
+    assert _run(["git", "status", "--porcelain"], project).stdout == ""
+
+
 def _hooks(project: Path) -> list[dict[str, Any]]:
     """Return every command hook declared in a generated project's `.claude/settings.json`."""
     settings = json.loads((project / ".claude" / "settings.json").read_text(encoding="utf-8"))
