@@ -86,7 +86,8 @@ uv run pytest -k gate           # only the generated project's gate, when iterat
 copier copy --trust --defaults -d base_template="$BASE_TEMPLATE_DIR" . /tmp/scratch
 ```
 
-Run the linters **through prek, never directly**: the hooks pin their own versions. First-time
+Run the linters **through prek, never directly**: the hooks run each tool's latest release, which
+one on PATH may not be. First-time
 setup needs all three shims, or the commit-message check and `git merge --no-ff` into `main` break:
 
 ```bash
