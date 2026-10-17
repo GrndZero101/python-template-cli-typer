@@ -459,6 +459,26 @@ def test_the_layers_define_the_shared_questions_alike(base_checkout: Path) -> No
             assert question.get(key) == use_case[name].get(key), f"{name}: `{key}` differs"
 
 
+def test_every_copy_of_the_uv_pin_agrees_with_the_base(base_checkout: Path) -> None:
+    """The base's `bootstrap.sh` holds the pin; each copy here is a floor of it or CI's version.
+
+    The base's own suite holds its copies to the same line, so a pin moved there and not here
+    fails on the base's CI, which runs this suite.
+    """
+    shim = (base_checkout / "bootstrap.sh").read_text(encoding="utf-8")
+    pin = re.search(r"^UV_VERSION=(\S+)$", shim, re.MULTILINE)
+    assert pin, "the base's bootstrap.sh has no UV_VERSION= line"
+    floor = f">={pin.group(1)}"
+    root = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert root["tool"]["uv"]["required-version"] == floor
+    template = (REPO_ROOT / "template" / "pyproject.toml.jinja").read_text(encoding="utf-8")
+    assert re.findall(r'^required-version = "(.*)"$', template, re.MULTILINE) == [floor]
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    setups = ci.count("uses: astral-sh/setup-uv@")
+    versions = re.findall(r'^\s+version: "(.*)"$', ci, re.MULTILINE)
+    assert versions == [pin.group(1)] * setups, "each setup-uv step must run the floor"
+
+
 # A user's copier settings file, naming a default for every shared question that no answer here
 # uses. Settings outrank a template's own default, so a layer that fell back to its default would
 # record one of these instead of the answer. The base doesn't: its copy, run with no `-a`, reads
