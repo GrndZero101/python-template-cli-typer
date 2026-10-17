@@ -86,10 +86,8 @@ separately, touching only its own files:
 | The base | `.copier-answers.base.yml` | `copier update --trust -a .copier-answers.base.yml` |
 | This one, the CLI | `.copier-answers.yml` | `copier update --trust` |
 
-Run both, the base first: a pin can have a copy in each layer, and the base's are the ones that
-must not lag. This layer's `required-version` is the `uv` floor, while the base's `uv-pre-commit`
-rev is the `uv` that the commit's `uv-lock` hook runs, so raising the floor first refuses that
-hook. Each update needs a clean tree, so commit between them:
+Run both, the base first: this layer is written against the base, so a change here that needs a
+base change then never lands ahead of it. Each update needs a clean tree, so commit between them:
 
 ```bash
 git status --short                    # must be clean; copier refuses otherwise
