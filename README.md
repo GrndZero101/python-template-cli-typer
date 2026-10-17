@@ -45,8 +45,14 @@ git switch -c feat/first-thing                    # never work on main
 ```
 
 You will be asked for: project name, package name, console script name, description, author name
-and email, minimum Python version (3.12, 3.13 or 3.14), licence (MIT, Apache-2.0 or Proprietary)
-and the name on its copyright line.
+and email, minimum Python version (3.12, 3.13 or 3.14), licence (MIT, Apache-2.0 or Proprietary),
+the name on its copyright line, and CI (`none` or `github`).
+
+**CI** defaults to `none`, which ships nothing, so a project on GitLab or with no CI is free to add
+its own. `github` ships one `.github/workflows/ci.yml` that runs `prek run --all-files` and
+`uv run pytest` on pushes to `main` and on pull requests, on Linux only: on a private repository
+macOS and Windows minutes cost more, so they are commented in. To change the answer later, pass it
+to both layers' updates, `-d ci=github`; a layer given no answer keeps the one it recorded.
 
 **Answer your name and email once.** Copier reads a personal settings file and offers its
 `defaults` as the default answer to any question of the same name, in every template. It lives at

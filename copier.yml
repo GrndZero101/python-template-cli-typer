@@ -63,7 +63,7 @@ project_description:
   help: One-line description
   default: ""
 
-# Every question from here through `copyright_year` is also asked by the base template, which
+# Every question from here through `ci` is also asked by the base template, which
 # reads these answers instead of asking again. A generation test asserts the two definitions agree.
 author_name:
   type: str
@@ -109,6 +109,16 @@ copyright_year:
   type: str
   default: "{{ copyright_year | default('%Y' | strftime) }}"
   when: false
+
+# Which CI host gets a workflow (D17). `none` renders nothing, so a project can add its own CI
+# without a conflict on update. `github` renders one thin workflow running the gate and the tests.
+ci:
+  type: str
+  help: CI workflow to ship
+  default: none
+  choices:
+    - none
+    - github
 
 # An answer, not a constant, so the generation tests and the base's CI can point it at a local
 # checkout. It is recorded in `.copier-answers.yml`, which makes the base's origin visible.
