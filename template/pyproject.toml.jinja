@@ -20,6 +20,10 @@ dependencies = [
 [project.scripts]
 {{ script_name }} = "{{ package_name }}.cli:main"
 
+[tool.uv]
+# The uv floor, the pin in python-template-base's bootstrap.sh. uv refuses to run below it.
+required-version = ">=0.12.21"
+
 [build-system]
 requires = ["uv_build>=0.12.21,<0.13.0"]
 build-backend = "uv_build"
