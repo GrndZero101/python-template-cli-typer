@@ -108,5 +108,9 @@ jobs:
           version: "0.12.24"
           cache-python: true
       - run: uv sync --locked
+      # The base's setup helper, which one test runs, checks for these as uv tools, as a user's
+      # machine has them. The suite itself still runs the dev group's.
+      - run: uv tool install copier
+      - run: uv tool install prek
       # prek and copier come from the dev group, so the suite finds them on the venv's PATH.
       - run: uv run pytest -ra

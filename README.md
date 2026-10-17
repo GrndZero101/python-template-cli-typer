@@ -108,6 +108,12 @@ uv run python tools/finish_branch.py "chore(template): update from the templates
 `<commit>` is the `_commit` value copier just wrote to that layer's answers file.
 `finish_branch.py` squashes the branch, runs the gate and the tests, and merges it into `main`.
 
+The base's setup helper runs this whole flow as one command, from a clone of
+[python-template-base](https://github.com/GrndZero101/python-template-base):
+`sh bootstrap.sh update my-project`, with `--finish` to merge too. It stops at a conflict and says
+how to carry on; [its README](https://github.com/GrndZero101/python-template-base#keeping-it-in-sync-with-the-template)
+has the details.
+
 **`--trust` runs nothing on an update.** It lets a template run its `_tasks`, and copier asks for
 it whenever a template declares any, exiting 4 without it. Every task here is guarded to run on
 `copy` only, so an update runs none of them. An agent can run the update too, but it cannot answer
