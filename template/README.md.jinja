@@ -35,7 +35,22 @@ by lint config and a `prek` gate — not just documented and hoped for.
 
 ## Setup
 
-The template's generation tasks already ran these. Repeat them only on a fresh clone:
+Once per machine: git, [uv](https://docs.astral.sh/uv/getting-started/installation/), and prek as
+a uv tool.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh     # Linux, macOS or WSL; then open a new shell
+uv tool install prek
+```
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
+# open a new terminal, so uv is on PATH
+uv tool install prek
+```
+
+The template's generation tasks already ran these. Repeat them only on a fresh clone, the same on
+every OS:
 
 ```bash
 uv sync
