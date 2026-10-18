@@ -24,8 +24,8 @@ the same for `user.email`.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh     # then open a new shell, so uv is on PATH
-uv tool install copier
-uv tool install prek
+uv tool install --upgrade copier     # installs it, or upgrades one already there
+uv tool install --upgrade prek
 copier copy --trust gh:GrndZero101/python-template-cli-typer my-project     # answer the prompts
 cd my-project
 ```
@@ -36,8 +36,8 @@ cd my-project
 winget install --id Git.Git -e      # git, if you have none
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 # open a new terminal, so uv is on PATH
-uv tool install copier
-uv tool install prek
+uv tool install --upgrade copier     # installs it, or upgrades one already there
+uv tool install --upgrade prek
 copier copy --trust gh:GrndZero101/python-template-cli-typer my-project     # answer the prompts
 cd my-project
 ```
