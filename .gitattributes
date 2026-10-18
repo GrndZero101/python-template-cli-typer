@@ -1,0 +1,4 @@
+# LF in the working tree on every OS, whatever `core.autocrlf` says, for this repo itself: copier
+# renders a generated project from the clone it makes, so CRLF here would become CRLF there. The
+# base template ships the generated project's own .gitattributes.
+* text=auto eol=lf
