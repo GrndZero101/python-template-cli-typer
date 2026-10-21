@@ -173,9 +173,11 @@ it whenever a template declares any, exiting 4 without it. Every task here is gu
 copier's prompts: give it `--defaults`, with new questions answered explicitly (below). Run it in a
 terminal of your own when you want copier to ask — on Windows, a real console: from Git Bash or any
 other shell without one, copier's prompts crash with `NoConsoleScreenBufferError`, so there too the
-update needs `--defaults`. Two warnings on Windows are noise: "Make sure Git >= 2.24 is installed"
-(copier misreads git's `.windows.N` version suffix) and a `MissingFileWarning` for the answers file
-during the base update (the old version is rendered in a temporary directory that lacks it).
+update needs `--defaults`. Two warnings are noise. "Make sure Git >= 2.24 is installed" appears with
+any recent git, on every platform: copier 9.19 runs `git diff-tree --inter-hunk-context=-1`, which
+newer git rejects, then retries with `0` and blames your git version. A `MissingFileWarning` for
+the answers file during the base update is harmless too: the old version is rendered in a
+temporary directory that lacks it.
 
 **`uv sync` before any check.** A dependency the template dropped stays installed in `.venv` until
 you sync. `ty` then still resolves an import that `pyproject.toml` no longer provides, and the gate

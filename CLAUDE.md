@@ -49,6 +49,17 @@ Everything else ships literally. The source modules manage it because their inte
 name. Keep it that way: an absolute import there would force another file to become a template.
 Anything that needs the script name should import it from `config.py` rather than render it again.
 
+## Adopting a project's code
+
+A field report in `TODO.md` names working code to copy. Copy it **byte for byte**, docstrings and
+tests included. On that project's next `copier update`, every line that upstream changed and the
+project did not change the same way comes back as a conflict, so an improvement made on the way in
+turns a clean merge into markers across every file it touched. Improve the code in a later merge,
+once the source project has updated. If a change cannot wait, or a helper lands under a different
+name than the project gave its own (`_global_overrides` against `_given_globals`), say so in the
+merge commit's body: which files the project should take whole, and which of its functions to
+delete. This repo has no release notes; the merge commits are the nearest thing to them.
+
 ## The gate
 
 `template/` cannot be checked in place: it holds Jinja and has no `pyproject.toml`, so `ruff` would

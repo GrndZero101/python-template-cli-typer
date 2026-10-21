@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 import typer
+from pydantic import ValidationError
 
 from {{ package_name }} import config
 from {{ package_name }}.cli import app
@@ -82,16 +83,17 @@ def test_invalid_variable_names_the_value_the_flag_and_the_variable(
 
 
 def test_a_file_only_setting_offers_no_flag(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pretend `output` is file-only: its error must not send the user to a flag it lacks.
+    """Treated as file-only, `output`'s error must not send the user to a flag it lacks.
 
     It checks only the flag's absence, not what the message calls the file: a project whose
     file-only settings live elsewhere, such as a workspace file, names that instead.
     """
-    monkeypatch.setattr(config, "FILE_ONLY_FIELDS", ("output",))
     monkeypatch.setenv(OUTPUT_VAR, "xml")
-    with pytest.raises(SettingsError, match="output=") as raised:
-        load_settings(GlobalOptions())
-    assert "--output" not in str(raised.value)
+    with pytest.raises(ValidationError) as raised:
+        Settings()
+    message = config._describe(raised.value.errors()[0], ("output",))
+    assert message.startswith("output=")
+    assert "--output" not in message
 
 
 def test_unrelated_prefixed_variable_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:

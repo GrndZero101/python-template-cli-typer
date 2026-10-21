@@ -6,8 +6,9 @@ on Windows starts WSL, and that is neither fast nor deterministic.
 """
 
 import pytest
+import typer
 
-from {{ package_name }}.cli import main
+from {{ package_name }}.cli import app, main
 from {{ package_name }}.config import PROG_NAME
 
 COMPLETE_VAR = "{{ completion_env_var }}"
@@ -29,9 +30,17 @@ def test_each_shell_gets_a_script_naming_the_program(
 def test_a_command_name_completes(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """The app's first command completes from its first two letters, whatever the project named it.
+
+    PowerShell's completions arrive one per line, as `name:::help`.
+    """
+    command = typer.main.get_command(app)
+    assert isinstance(command, typer.main.TyperGroup)
+    name = next(iter(command.commands))
     monkeypatch.setenv(COMPLETE_VAR, "complete_powershell")
-    monkeypatch.setenv("_TYPER_COMPLETE_ARGS", f"{PROG_NAME} ab")
-    monkeypatch.setenv("_TYPER_COMPLETE_WORD_TO_COMPLETE", "ab")
+    monkeypatch.setenv("_TYPER_COMPLETE_ARGS", f"{PROG_NAME} {name[:2]}")
+    monkeypatch.setenv("_TYPER_COMPLETE_WORD_TO_COMPLETE", name[:2])
     with pytest.raises(SystemExit):
         main([])
-    assert capsys.readouterr().out.startswith("about")
+    completed = [line.split(":::")[0] for line in capsys.readouterr().out.splitlines()]
+    assert name in completed
