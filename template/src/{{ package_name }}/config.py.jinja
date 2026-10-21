@@ -90,14 +90,15 @@ def env_var(field: str) -> str:
     return f"{ENV_PREFIX}{field.upper()}"
 
 
-def _describe(error: ErrorDetails) -> str:
+def _describe(error: ErrorDetails, file_only: tuple[str, ...]) -> str:
     """Render one validation error as `field=value (--flag, VAR or the config file): reason`.
 
-    A secret's value is masked, and it is offered no flag, since it has none. A file-only
-    setting names the key inside it that failed, such as `profiles.home.path`.
+    A secret's value is masked, and it is offered no flag, since it has none. A setting named in
+    `file_only` (the caller passes `FILE_ONLY_FIELDS`) names the key inside it that failed, such as
+    `profiles.home.path`.
     """
     field = str(error["loc"][0]) if error["loc"] else "settings"
-    if field in FILE_ONLY_FIELDS:
+    if field in file_only:
         where = ".".join(str(part) for part in error["loc"])
         return f"{where}={error['input']!r} (the config file): {error['msg']}"
     if field in secret_fields():
@@ -152,7 +153,7 @@ def load_settings(
     try:
         return Settings(**given)
     except ValidationError as exc:
-        problems = "; ".join(_describe(error) for error in exc.errors())
+        problems = "; ".join(_describe(error, FILE_ONLY_FIELDS) for error in exc.errors())
         msg = f"invalid configuration: {problems}"
         raise SettingsError(msg) from exc
     except ConfigFileError as exc:
