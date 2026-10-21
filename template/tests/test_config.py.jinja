@@ -7,7 +7,8 @@ The last section checks the wiring. Adding a setting takes four coordinated edit
 option in `options.py` — and a missed one fails silently: the
 flag is accepted and ignored, or the variable is read but never documented. These tests name
 whichever edit is missing. A secret setting takes none of the three flag edits, and the tests
-check that a credential's field is typed `SecretStr`, so it is masked wherever it is shown.
+check that a credential's field is typed `SecretStr`, so it is masked wherever it is shown. Nor
+does a file-only setting, one named in `FILE_ONLY_FIELDS`.
 """
 
 import dataclasses
@@ -22,6 +23,7 @@ from {{ package_name }} import config
 from {{ package_name }}.cli import app
 from {{ package_name }}.config import (
     ENV_PREFIX,
+    FILE_ONLY_FIELDS,
     GlobalOptions,
     Settings,
     SettingsError,
@@ -79,6 +81,17 @@ def test_invalid_variable_names_the_value_the_flag_and_the_variable(
     assert "--output" in message
 
 
+def test_a_file_only_setting_names_the_config_file_and_no_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pretend `output` is file-only: its error must not send the user to a flag it lacks."""
+    monkeypatch.setattr(config, "FILE_ONLY_FIELDS", ("output",))
+    monkeypatch.setenv(OUTPUT_VAR, "xml")
+    with pytest.raises(SettingsError, match="the config file") as raised:
+        load_settings(GlobalOptions())
+    assert "--output" not in str(raised.value)
+
+
 def test_unrelated_prefixed_variable_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(f"{ENV_PREFIX}NOT_A_SETTING", "x")
     assert load_settings(GlobalOptions()) == Settings()
@@ -108,8 +121,12 @@ def _option_help(command: typer.main.TyperGroup) -> str:
 
 SECRET_FIELDS = secret_fields()
 # A secret has no flag, so it is not in `_Overrides` or `load_settings`: a flag's value is visible
-# in shell history and to anyone who can list processes.
-FLAG_FIELDS = sorted(field for field in Settings.model_fields if field not in SECRET_FIELDS)
+# in shell history and to anyone who can list processes. A file-only setting has none either.
+FLAG_FIELDS = sorted(
+    field
+    for field in Settings.model_fields
+    if field not in SECRET_FIELDS and field not in FILE_ONLY_FIELDS
+)
 # A field whose name ends in one of these holds a credential. Extend it for your own naming.
 CREDENTIAL_SUFFIXES = ("token", "password", "secret", "api_key", "private_key")
 
@@ -129,6 +146,12 @@ def test_every_credential_setting_is_secret() -> None:
         f"type {exposed} as SecretStr and drop their flags: "
         'follow "Recipe: add a secret setting" in the python-cli-typer skill'
     )
+
+
+def test_every_file_only_setting_is_a_setting() -> None:
+    """A misspelt name in `FILE_ONLY_FIELDS` would exempt nothing and demand a flag for the field."""
+    unknown = sorted(set(FILE_ONLY_FIELDS) - set(Settings.model_fields))
+    assert unknown == [], f"FILE_ONLY_FIELDS names {unknown}, which are not fields of Settings"
 
 
 def test_overrides_declare_every_setting() -> None:

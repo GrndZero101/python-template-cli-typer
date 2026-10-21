@@ -24,10 +24,24 @@ app = typer.Typer(add_completion=False)
 _TOOL_COMPLETE=source_zsh tool > "${ZDOTDIR:-$HOME}/completions/_tool"
 ```
 
+`add_completion=False` has a side effect: typer registers its shells only while it builds the
+`--install-completion` options, so without them every `source_<shell>` answers "Shell zsh not
+supported" (verified in 0.27). `main` in `cli.py` calls `typer.completion.completion_init()` first
+to register them, and `tests/test_completion.py` checks every shell emits a script. Keep both.
+
 That output is a clean `#compdef` block with no `fpath` or `compinit` lines. The env var is derived
 from the program name, uppercased — so a `prog_name` containing a dot yields an invalid variable;
 rely on the `[project.scripts]` name. `source_bash`, `source_fish` and `source_powershell` work the
-same way.
+same way. PowerShell evaluates it on each start, from a line in `$PROFILE`:
+
+```powershell
+$env:_TOOL_COMPLETE = 'source_powershell'; tool | Out-String | Invoke-Expression
+```
+
+**bash on Windows:** typer's bash support checks the version by running `bash`, and on Windows the
+first `bash` on PATH is usually WSL's launcher (`System32\bash.exe`). It is slow, prints noise
+when no distribution is installed, and reports WSL's bash rather than Git Bash's. That is why
+`tests/test_completion.py` leaves bash out; a Git Bash user generates the script from Git Bash.
 
 Document this in the README. `--show-completion` is not a substitute: it uses shellingham to detect
 the *parent process*, so it cannot cross-generate another shell's script.

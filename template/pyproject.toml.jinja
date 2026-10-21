@@ -20,8 +20,11 @@ dependencies = [
 [project.scripts]
 {{ script_name }} = "{{ package_name }}.cli:main"
 
+# uv asks for an upper bound here and warns on every build once uv itself passes it, so the bound
+# moves up with each uv minor release. The generation tests fail when the uv running them is outside
+# it, which is the signal to raise both numbers.
 [build-system]
-requires = ["uv_build>=0.12.21,<0.13.0"]
+requires = ["uv_build>=0.13.0,<0.14.0"]
 build-backend = "uv_build"
 
 [dependency-groups]

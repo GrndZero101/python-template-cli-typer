@@ -124,11 +124,20 @@ platform; otherwise at `~/.config/{{ script_name }}/config.yaml` on Linux and ma
 The docstring of `config.py` says how to add a setting. An invalid value from any source exits 2
 with a message naming the flag, the variable and the config file.
 
-Shell completion is emitted rather than installed:
+Shell completion is emitted rather than installed. zsh, written once to a file on its `fpath`:
 
 ```bash
 {{ completion_env_var }}=source_zsh {{ script_name }} > "${ZDOTDIR:-$HOME}/completions/_{{ script_name }}"
 ```
+
+PowerShell, a line in `$PROFILE`:
+
+```powershell
+$env:{{ completion_env_var }} = 'source_powershell'; {{ script_name }} | Out-String | Invoke-Expression
+```
+
+`source_fish` and `source_bash` work the same way. On Windows, generating the bash script runs
+`bash`, which is usually WSL's launcher: slow, and it answers for WSL's bash, not Git Bash's.
 
 ## Installing it
 

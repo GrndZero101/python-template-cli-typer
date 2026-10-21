@@ -72,6 +72,7 @@ TOOLS_TESTS = {
 TESTS = {
     "conftest.py",
     "test_about.py",
+    "test_completion.py",
     "test_config.py",
     "test_config_file.py",
     "test_logging_setup.py",
@@ -564,6 +565,30 @@ def test_the_use_case_pyproject_holds_what_the_base_relies_on(copie: Copie) -> N
     _assert_pyproject_serves_the_base(project / "pyproject.toml")
 
 
+def _version(text: str) -> tuple[int, ...]:
+    """Return `0.13.1` as `(0, 13, 1)`, for comparing release versions without `packaging`."""
+    return tuple(int(part) for part in text.split("."))
+
+
+@requires_uv
+def test_the_uv_build_pin_admits_the_uv_in_use() -> None:
+    """uv warns on every build once it passes the pin's upper bound, so a stale pin fails here.
+
+    session_doctor keeps uv at its latest release, so this fails within days of a uv minor: raise
+    the pin in `template/pyproject.toml.jinja` to the new minor, as `uv init` writes it.
+    """
+    pyproject = (REPO_ROOT / "template" / "pyproject.toml.jinja").read_text(encoding="utf-8")
+    pin = re.search(r'"uv_build>=([\d.]+),<([\d.]+)"', pyproject)
+    assert pin is not None, "the build-system pin is not uv_build>=X,<Y"
+    reported = _run(["uv", "--version"], REPO_ROOT).stdout
+    in_use = re.search(r"uv (\d+\.\d+\.\d+)", reported)
+    assert in_use is not None, f"cannot read uv's version from {reported!r}"
+    lower, upper = _version(pin[1]), _version(pin[2])
+    assert lower <= _version(in_use[1]) < upper, (
+        f"uv {in_use[1]} is outside uv_build>={pin[1]},<{pin[2]}; raise the pin"
+    )
+
+
 # --- the generated project's own gate -----------------------------------------------------
 
 
@@ -618,8 +643,8 @@ def test_generated_project_works_at_the_python_floor(copie: Copie) -> None:
 # The skills' reference files, and where their recipes say to copy them.
 SKILLS_DIR = Path(".claude") / "skills"
 REFERENCE_DIR = SKILLS_DIR / "python-cli-typer" / "reference"
-REFERENCE_MODULES = ["http_client.py", "status.py"]
-REFERENCE_TESTS = ["test_http_client.py", "test_status.py"]
+REFERENCE_MODULES = ["editor.py", "http_client.py", "status.py"]
+REFERENCE_TESTS = ["test_editor.py", "test_http_client.py", "test_status.py"]
 DATA_REFERENCE_DIR = SKILLS_DIR / "python-data" / "reference"
 TUI_REFERENCE_DIR = SKILLS_DIR / "python-tui" / "reference"
 # The scaffold line the "add a command" recipe's registration goes beside.

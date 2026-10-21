@@ -77,8 +77,15 @@ environment so a variable can still override it for one run:
   profile, because settings should follow the user.
 - **Tests never read the developer's file.** `conftest.py` points `XDG_CONFIG_HOME` into
   `tmp_path` for every test; a test that needs a file writes one there, or passes `--config`.
-- **No project-local file** (`./<script>.yaml`). It would make the working directory change a
-  command's behaviour, which is the surprise the `.env` default avoids.
+- **No project-local file by default** (`./<script>.yaml`). It would make the working directory
+  change a command's behaviour, which is the surprise the `.env` default avoids. A tool that acts
+  on a dataset, rather than on the user's behalf, does want one beside the data: "A workspace
+  file" below.
+
+**File-only settings** (`FILE_ONLY_FIELDS`) are the second exception to "every setting has a
+flag", after secrets. A mapping of models, such as named profiles, has no sensible flag or
+variable spelling, so it is set in the file alone. Its error names the path inside the file
+(`profiles.home.format`), not a flag. Recipe in the skill.
 
 Global options live on `@app.callback()`, which stores what it was given in a frozen
 `GlobalOptions` on `ctx.obj`. Each command calls `load_settings(global_options(ctx), ...)` once,
@@ -94,3 +101,55 @@ rather than quietly dropping the flags. Where there is no command line, pass `Gl
 
 Do not merge a command's overrides into existing settings with `model_copy(update=...)` — it skips
 validation entirely. Construct a new `Settings`.
+
+## A command that repairs the config file
+
+The app callback loads settings before any command runs, so a broken config file stops every
+command, including `config edit` or `init`, whose job is to fix or create it. Name those commands
+in `cli.py` and return from the callback before loading:
+
+```python
+# Commands that must run while the config file is missing or invalid: fixing it is their job.
+WITHOUT_CONFIG_FILE = ("config", "init")
+
+@app.callback()
+def configure(ctx: typer.Context, *, verbose: VerboseOption = None, ...) -> None:
+    options = GlobalOptions(verbose=verbose, config=config)
+    ctx.obj = options
+    if ctx.invoked_subcommand in WITHOUT_CONFIG_FILE:
+        configure_logging(verbose=bool(verbose))
+        return
+    settings = load_settings(options)
+    configure_logging(verbose=settings.verbose)
+```
+
+Such a command finds the file without reading it: `--config`, then `<PREFIX>_CONFIG`, then
+`default_config_path`, the order `Settings` resolves `config` in. Write that as a `config_path`
+function in `config.py`, with the environment as a parameter, and test that it agrees with
+`load_settings(...).config` for a valid file. Open it with `editor.py` from the skill's
+references, then call `load_settings` to validate what the user saved and report any mistake as
+an ordinary `SettingsError`. Seed a missing file with every setting commented out, so the user
+edits a list of what exists rather than an empty file.
+
+## A workspace file
+
+For a tool that works on a folder of data, such as a ledger, a site or a set of statements, the
+data's own settings belong beside it, in a file found the way git finds `.git`:
+
+- **Found by walking up from the current folder** to the first `<script>.yaml`, so a command run
+  anywhere inside the folder uses it. `--workspace PATH` (a global option) or
+  `<PREFIX>_WORKSPACE` names one instead, and must then exist; a searched-for one need not.
+- **Precedence**: flag, variable, workspace file, user config file, default. One
+  `ConfigFileSource` reads both files and returns `{**user, **workspace}`, so there is still one
+  validation pass. Which keys each file may hold can differ: tool-wide preferences in the user
+  file, the dataset's profiles in the workspace file; reject a key in the wrong file by name.
+- **A relative path in it is relative to the workspace folder**, never to the current folder, so
+  the file works from any folder below it and the tree can be moved. Anchor paths when the file
+  is read, before validation, so the model only ever sees absolute paths.
+- **The search start is a parameter**: `ConfigFileSource(..., cwd=Path.cwd())` in
+  `settings_customise_sources`, and `find_workspace(start)` a plain function. Its tests pass a
+  folder under `tmp_path`.
+- **Tests must not find the developer's workspace**: add `monkeypatch.chdir(tmp_path)` to the
+  autouse fixture in `conftest.py` beside the `XDG_CONFIG_HOME` one, or running the suite from
+  inside a workspace changes its results.
+- **`about` shows which workspace file is in effect**, as it shows the config path.

@@ -38,6 +38,43 @@ a CSV file as a table that narrows as you type. Then:
 
 `pytest-asyncio` runs the async Pilot tests; `textual-dev` provides `textual console`.
 
+## Recipe: a theme setting, and a look of your own
+
+Textual ships 21 themes (`textual.theme.BUILTIN_THEMES`): `nord`, `gruvbox`, the four
+`catppuccin-*` flavours and more. `ansi-dark` and `ansi-light` use the terminal's own sixteen
+colours, so they match whatever palette the user has already chosen. Let the user pick:
+
+1. **A `theme` setting**, `str`, defaulting to a built-in, through "Recipe: add a setting" in
+   python-cli-typer, so `--theme`, `<PREFIX>_THEME` and `theme:` in the config file all work.
+2. **Check the name in the command, before `run_screen`**, against `BUILTIN_THEMES` plus your own,
+   and exit 2 naming the valid ones. Not in a `config.py` validator: that would import Textual
+   into every command.
+3. **Apply it in the app's `__init__`**, after `super().__init__()`: `self.register_theme(...)` for
+   each of your own, then `self.theme = theme`. ctrl+p "Change theme" still works at run time.
+
+Write a `Theme` of your own only for a look Textual lacks. Borland's Turbo Vision is one: CGA's
+blue desktop tiled with `░`, grey dialogs with black drop shadows, cyan lists and a grey status
+line with red keys:
+
+```python
+TURBO_VISION = Theme(
+    name="turbo-vision", primary="#00AAAA", secondary="#00AA00", accent="#FFFF55",
+    error="#AA0000", foreground="#FFFFFF", background="#0000AA", surface="#0000AA",
+    panel="#AAAAAA", dark=True,
+)
+```
+
+A theme sets colours only. Borders, a patterned background and shadows are CSS and widgets:
+
+- **Scope the theme's CSS to `App.-theme-<name>`**, the class Textual puts on the app while that
+  theme is on: `App.-theme-turbo-vision #window { border: double #FFFFFF; }`. Every other theme
+  then keeps Textual's look, and switching from the palette restyles the whole screen live.
+- **A widget that draws only for one theme** checks `self.app.theme` in `render` and returns an
+  empty `Text` otherwise, as a `░` desktop does. A shadow is two plain `Static` strips beside and
+  below the window, `display: none` until the scoped CSS shows them.
+- **Test it like any setting**: the default, an unknown name refused with the list of names, and
+  through Pilot that the themed widget draws under its theme and not under another.
+
 ## Rules every TUI command follows
 
 - **Logic in a module with no Textual import.** A widget runs only inside an app, so a debugger
@@ -92,6 +129,33 @@ terminal, `TEXTUAL_LOG=textual.log` appends the same logs to a file.
 
 To step through code, step through the logic module through its tests, as the **python-debug**
 skill describes; that is why the logic lives there.
+
+## Seeing the screen
+
+Look at a layout change rather than reasoning about the CSS. From a scratch script that is not
+committed, run the app headless, drive it to the state in question and save an SVG:
+
+```python
+async with app.run_test(size=(80, 24)) as pilot:
+    await pilot.press("e", "u")
+    await pilot.pause()
+    app.save_screenshot("screen.svg", str(out_dir))
+```
+
+Render the SVG to PNG with any headless Chromium, then read the PNG. Pass absolute paths, as
+Windows paths when the browser is Windows' own (`wslpath -w` from WSL):
+
+```bash
+msedge --headless --hide-scrollbars --window-size=1000,640 --screenshot=<dir>/screen.png <dir>/screen.svg
+```
+
+`chrome` and `chromium` take the same flags; widen the window if the image is clipped. A widget
+in the wrong place, clipped, or in the wrong order shows at once, where the widget tree only
+hints at it.
+
+**`1fr` loses a sibling's margin.** Textual takes a sibling's margin off a `1fr` size, so a window
+`width: 1fr` above a shadow strip with `margin-left: 2` comes out two columns narrow. Size such a
+widget `100%` of its container instead.
 
 ## Testing with Pilot
 
