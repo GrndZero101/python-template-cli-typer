@@ -6,7 +6,7 @@
 
 It has the shape every command here should have, the same as the scaffold's `about`:
 
-- `parse_url` validates each argument as typer parses it: a bad one is a usage error, exit 2,
+- `http_url` validates each argument as typer parses it: a bad one is a usage error, exit 2,
   through typer's own message, before any work starts.
 - `probe` and `probe_all` do the work. They take the client as a parameter, so a test passes one
   backed by `httpx.MockTransport`, and a debugger can call them with literal arguments.
@@ -45,7 +45,7 @@ class Probe(BaseModel):
     error: str | None = None
 
 
-def parse_url(raw: str) -> str:
+def http_url(raw: str) -> str:
     """Return `raw` if it is an http(s) URL. typer calls this for each URL argument.
 
     `typer.BadParameter` is a usage error: typer prints "Invalid value for 'URL': ..." after the
@@ -101,7 +101,7 @@ def status_command(
     ctx: typer.Context,
     urls: Annotated[
         list[str],
-        typer.Argument(parser=parse_url, metavar="URL", help="One or more URLs to check."),
+        typer.Argument(parser=http_url, metavar="URL", help="One or more URLs to check."),
     ],
     output: OutputOption = None,
 ) -> None:

@@ -48,3 +48,13 @@ Sequential and synchronous by default. Reach for `httpx.AsyncClient` only for fa
   caller then streams and a `--limit` can stop early.
 - `response.raise_for_status()` at the boundary; let the domain function raise and let `main` decide
   the exit code.
+
+## Two Windows gotchas
+
+- **A refused connection takes about two seconds to report**, even to `127.0.0.1`: Windows retries
+  the SYN before it gives up. A connect timeout under that reports a timeout instead of a refusal,
+  so a test of a closed port, or a message that tells the two apart, needs a timeout above 2 s.
+- **Keep certifi, httpx's default.** Python's `ssl.create_default_context()` on Windows trusts the
+  intermediate (`CA`) store and sets `VERIFY_X509_PARTIAL_CHAIN`, so a verified chain can stop at a
+  cached intermediate; and Windows fetches trusted roots on demand, so Python's view of the system
+  store can lack roots the browser trusts. `verify=True` with certifi sees neither.

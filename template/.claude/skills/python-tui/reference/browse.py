@@ -73,7 +73,7 @@ def run_screen(source: RowTable) -> None:
     BrowseApp(source).run()
 
 
-def parse_csv_path(raw: str) -> Path:
+def csv_file(raw: str) -> Path:
     """Return `raw` as a path if it is an existing .csv file. typer calls this."""
     path = Path(raw)
     if path.suffix.lower() != ".csv":
@@ -88,9 +88,7 @@ def parse_csv_path(raw: str) -> Path:
 def browse_command(
     path: Annotated[
         Path,
-        typer.Argument(
-            parser=parse_csv_path, metavar="FILE", help="A .csv file with a header row."
-        ),
+        typer.Argument(parser=csv_file, metavar="FILE", help="A .csv file with a header row."),
     ],
 ) -> None:
     """Browse a CSV file as a table, filtering rows as you type. Escape clears; ctrl+q quits."""
