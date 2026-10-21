@@ -5,10 +5,12 @@ explicit exit code, a missing argument, an unknown option — exists regardless 
 the project currently has.
 """
 
+import io
 from typing import Annotated
 
 import pytest
 import typer
+from rich.console import Console
 
 from {{ package_name }}.typer_entrypoint import run_app
 
@@ -66,3 +68,19 @@ def test_missing_argument_help_matches_explicit_help(capsys: pytest.CaptureFixtu
     explicit = capsys.readouterr().out
     _run(["greet"])
     assert explicit.strip() in capsys.readouterr().err
+
+
+def test_a_usage_error_is_a_plain_line_in_a_pipe(capsys: pytest.CaptureFixture[str]) -> None:
+    assert _run(["greet", "--bogus"]) == 2
+    err = capsys.readouterr().err
+    assert "Error: No such option: --bogus" in err
+    assert "Error ─" not in err
+
+
+def test_a_usage_error_is_typers_panel_at_a_terminal(capsys: pytest.CaptureFixture[str]) -> None:
+    terminal = Console(file=io.StringIO(), force_terminal=True)
+    assert run_app(app, ["greet", "--bogus"], prog_name="probe", console=terminal) == 2
+    err = capsys.readouterr().err
+    assert "Error: No such option" not in err, "the panel's title replaces the prefix"
+    assert "No such option: --bogus" in err
+    assert "Try 'probe greet --help' for help." in err

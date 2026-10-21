@@ -216,9 +216,12 @@ the app callback must not load settings before it: "A command that repairs the c
   captured stderr; `caplog` sees nothing. `reference/logging.md`.
 - **`main` returns an exit code** through `run_app`; never `sys.exit` below the `__main__` block,
   and never `import click` — typer 0.27 vendors it. `reference/typer.md`.
-- **A runtime failure names its cause.** In the `except` that exits, put the exception in the
-  stderr message and log it, as `status.py` does: `logger.opt(exception=exc).debug(...)`, then
-  `raise typer.Exit(1) from exc`. typer never prints an exit's cause, so `from exc` alone hides it.
+- **A runtime failure names its cause and what to try.** In the `except` that exits, log it, print
+  it with `print_error(message, hint=...)` from `output.py` and raise, as python-data's
+  `summary.py` does: `logger.opt(exception=exc).debug(...)`, `print_error(f"could not ...: {exc}",
+  hint="the file needs ...")`, then `raise typer.Exit(1) from exc`. typer never prints an exit's
+  cause, so `from exc` alone hides it. `print_error` is typer's red panel at a terminal and whole
+  `Error:`/`Hint:` lines in a pipe; never `sys.stderr.write` an error. `reference/output.md`.
 - **pydantic `BaseModel` at the edges** (API responses, output shapes), dataclasses inside.
   `reference/models.md`.
 

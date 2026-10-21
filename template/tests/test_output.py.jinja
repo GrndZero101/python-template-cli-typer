@@ -1,0 +1,38 @@
+"""How an error is printed: a panel for a person at a terminal, whole lines for a log or a pipe."""
+
+import io
+
+from rich.console import Console
+
+from {{ package_name }}.output import print_error
+
+LONG_PATH = "/var/lib/tool/a/deliberately/long/path/to/some/config/file.yaml" * 2
+
+
+def _console(*, terminal: bool) -> tuple[Console, io.StringIO]:
+    """Return a console writing to a buffer, as a terminal or not, 60 columns wide."""
+    buffer = io.StringIO()
+    console = Console(file=buffer, force_terminal=terminal, width=60, color_system=None)
+    return console, buffer
+
+
+def test_at_a_terminal_an_error_is_a_panel_with_its_hint() -> None:
+    console, buffer = _console(terminal=True)
+    print_error("nothing accepts connections on port 1", "check the port", console=console)
+    lines = buffer.getvalue().splitlines()
+    assert "Error" in lines[0]
+    assert "nothing accepts connections on port 1" in lines[1]
+    assert "Hint: check the port" in lines[2]
+    assert len({len(line) for line in lines}) == 1, "a panel's lines are all one width"
+
+
+def test_elsewhere_an_error_is_plain_lines_never_wrapped() -> None:
+    console, buffer = _console(terminal=False)
+    print_error(f"{LONG_PATH} is not readable", "check its permissions", console=console)
+    assert buffer.getvalue() == f"Error: {LONG_PATH} is not readable\nHint: check its permissions\n"
+
+
+def test_an_error_needs_no_hint() -> None:
+    console, buffer = _console(terminal=False)
+    print_error("config.yaml is not valid", console=console)
+    assert buffer.getvalue() == "Error: config.yaml is not valid\n"

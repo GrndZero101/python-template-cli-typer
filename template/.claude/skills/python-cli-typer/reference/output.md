@@ -81,6 +81,26 @@ with Progress(console=err, disable=not err.is_terminal) as progress:
 
 If you find yourself passing `out` to anything other than the final result render, that is the bug.
 
+## Errors for a person: `print_error`
+
+typer draws a usage error as a red panel titled Error at a terminal, and `run_app` keeps that. A
+runtime error written with `sys.stderr.write("Error: ...")` beside it looks like argparse, so
+`output.py` has `print_error(message, hint=None, console=err)`, which matches the panel at a
+terminal and prints `Error: ...` and `Hint: ...` as whole lines anywhere else. The lines are never
+wrapped: a path in a log stays copyable, and a test matches `f"Error: {path} ..."` exactly.
+
+```python
+except (OSError, UnicodeDecodeError, ValueError) as exc:
+    logger.opt(exception=exc).debug("could not read {}", path)
+    print_error(f"could not read {path}: {exc}", hint="it needs a header row and UTF-8 text")
+    raise typer.Exit(RUNTIME_FAILURE) from exc
+```
+
+The hint says what to try, and it has to be true, so repeat the contract the argument's help
+already states rather than guessing at the cause. A test of the panel passes
+`Console(file=io.StringIO(), force_terminal=True)` as `console`; `tests/test_output.py` has both
+paths.
+
 ## ASCII marks, colour for the verdict
 
 `✓`, `✗`, `→` and `·` in text raise `UnicodeEncodeError: 'charmap' codec can't encode` through

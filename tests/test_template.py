@@ -76,6 +76,7 @@ TESTS = {
     "test_config.py",
     "test_config_file.py",
     "test_logging_setup.py",
+    "test_output.py",
     "test_package.py",
     "test_typer_entrypoint.py",
 }
