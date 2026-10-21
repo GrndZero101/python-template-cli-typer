@@ -80,3 +80,11 @@ with Progress(console=err, disable=not err.is_terminal) as progress:
 ```
 
 If you find yourself passing `out` to anything other than the final result render, that is the bug.
+
+## ASCII marks, colour for the verdict
+
+`✓`, `✗`, `→` and `·` in text raise `UnicodeEncodeError: 'charmap' codec can't encode` through
+rich's legacy Windows renderer when stdout is cp1252, which it is under an agent's shell on Windows.
+rich degrades its own box-drawing characters safely; glyphs inside your text it passes straight to
+the stream. Mark a verdict with `OK`, `FAIL`, `->` and `-` and let the colour carry the meaning,
+which `NO_COLOR` and a pipe then strip without losing the words.

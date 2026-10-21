@@ -8,7 +8,7 @@
 It reads a CSV or parquet file of request records — `service`, `status`, `duration_ms` — and has
 the shape every command here has:
 
-- `parse_records_path` validates the argument as typer parses it: a missing file or another format
+- `csv_or_parquet_file` validates the argument as typer parses it: a missing file or another format
   is a usage error, exit 2, before any work starts.
 - `scan_records` reads lazily with the schema fixed, never inferred. `summarize` is the pipeline:
   each stage a name, collected once. Both are plain functions over polars frames, so a test passes
@@ -45,7 +45,7 @@ SUMMARY_SCHEMA = pl.Schema({
 })
 
 
-def parse_records_path(raw: str) -> Path:
+def csv_or_parquet_file(raw: str) -> Path:
     """Return `raw` as a path if it is an existing .csv or .parquet file. typer calls this."""
     path = Path(raw)
     if path.suffix.lower() not in SUFFIXES:
@@ -110,7 +110,7 @@ def summary_command(
     records: Annotated[
         Path,
         typer.Argument(
-            parser=parse_records_path,
+            parser=csv_or_parquet_file,
             metavar="FILE",
             help="A .csv or .parquet file with service, status and duration_ms columns.",
         ),

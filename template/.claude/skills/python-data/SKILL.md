@@ -35,7 +35,7 @@ per service. Then:
    python-cli-typer shows: `app.command("summary")(summary_command)`.
 2. **Rename and reshape it.** Change `RECORD_SCHEMA` to your input's columns, `summarize` to your
    pipeline, and `SUMMARY_SCHEMA` and `build_summary_table` to its output. Keep the layers:
-   `parse_records_path` validates the argument, `scan_records` reads, `summarize` computes,
+   `csv_or_parquet_file` validates the argument, `scan_records` reads, `summarize` computes,
    `emit_summary` renders, and the command only delegates.
 3. **Rewrite the test's five-row `RECORDS` and its `EXPECTED`**, by hand from the rows, not by
    running the pipeline and pasting what it printed.

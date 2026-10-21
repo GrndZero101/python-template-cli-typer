@@ -16,7 +16,7 @@ from {{ package_name }}.cli import main
 from {{ package_name }}.summary import (
     RECORD_SCHEMA,
     SUMMARY_SCHEMA,
-    parse_records_path,
+    csv_or_parquet_file,
     scan_records,
     summarize,
 )
@@ -80,12 +80,12 @@ def test_another_format_is_a_bad_parameter_naming_it(tmp_path: Path, name: str) 
     path = tmp_path / name
     path.write_text("{}", encoding="utf-8")
     with pytest.raises(typer.BadParameter, match=re.escape(repr(str(path)))):
-        parse_records_path(str(path))
+        csv_or_parquet_file(str(path))
 
 
 def test_a_missing_file_is_a_bad_parameter(tmp_path: Path) -> None:
     with pytest.raises(typer.BadParameter, match="does not exist"):
-        parse_records_path(str(tmp_path / "missing.csv"))
+        csv_or_parquet_file(str(tmp_path / "missing.csv"))
 
 
 # --- through main -------------------------------------------------------------------------

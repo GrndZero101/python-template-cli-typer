@@ -30,8 +30,9 @@ With `Annotated` the call sits inside the annotation, and the real default after
 
 A value that needs validating is parsed by `parser=` (SKILL.md, "Recipe: a validated argument").
 Two details: the parameter's annotation is what the parser *returns*, not `str`; and an
-argument's help line shows the parser's function name as its type (`<parse_url>`), which is why
-the recipe names them `parse_<thing>`.
+argument's help line shows the parser's function name as its type, `metavar` or not, which is why
+the recipe names a parser for what it accepts: `URL <http_url>` reads as help, `<parse_url>` as
+internals.
 
 Command bodies unpack and delegate. The decorated function belongs to typer; the work belongs in a
 plain annotated function you can call with literal arguments.
@@ -75,7 +76,10 @@ translate it to **0** in `main`; keep 2 for an unknown flag or subcommand. Also 
 
 A command missing a required argument is different: that **is** a usage error. `run_app` prints the
 command's full help rather than click's terse one-liner, but to **stderr** and with exit **2**, so
-`tool cmd && next` still stops and nothing lands in a pipe.
+`tool cmd && next` still stops and nothing lands in a pipe. A command whose every use needs an
+argument can instead be registered with `no_args_is_help=True` too, so the bare `tool cmd` is a
+help request like the bare `tool`; give it an `epilog=` of examples while you are there (SKILL.md,
+"Recipe: add a command").
 
 ## The script name is never `cli`
 

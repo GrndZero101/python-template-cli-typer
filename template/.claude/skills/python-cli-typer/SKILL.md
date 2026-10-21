@@ -37,10 +37,26 @@ a command that calls an API, start from `reference/status.py` instead — the ne
    app.command("status")(status_command)
    ```
 
-   By reference, never as a nested `typer.Typer`, so the command stays one word.
+   By reference, never as a nested `typer.Typer`, so the command stays one word. A command that
+   needs an argument is registered as the app itself is, so a bare `tool <name>` is a request for
+   help, not a usage error, and its help ends in examples:
+
+   ```python
+   app.command("probe", no_args_is_help=True, epilog=PROBE_EXAMPLES)(probe_command)
+   ```
+
+   The epilog is rich markup, a `[bold]Examples[/bold]` heading then one `tool probe ...` line per
+   use with a `[dim]# why[/dim]` comment, **separated by blank lines**: rich joins adjacent lines
+   into one paragraph.
 3. **Write `tests/test_<name>.py`** in two halves, as `test_about.py` has: the plain functions with
    injected dependencies, then end to end through `main([...])`, asserting the exit code, stdout
-   (`json.loads` it for `-o json`) and stderr separately.
+   (`json.loads` it for `-o json`) and stderr separately. Helpers that several test modules share
+   go in `tests/<area>/support.py`, imported as `from tests.<area>.support import ...`; `pythonpath`
+   has `.`, so pytest and ty both resolve it. Never import them from a `conftest.py`, since every
+   one is the module `conftest` and they clash, and never name a helper class `Test...`: pytest
+   collects it from every module that imports it, and `filterwarnings = ["error"]` turns that
+   warning into a failure. A test server closes its listening socket, or the
+   `PytestUnraisableExceptionWarning` fails the run the same way.
 4. **Check:** `uv run pytest`, then `prek run --all-files`.
 
 ## Recipe: call an HTTP API
@@ -77,16 +93,18 @@ client is a parameter with a default, never a module-level singleton.
 
 For any value that is not a plain `str`, `int` or `Path` — an amount, a `BASE/QUOTE` pair, a URL —
 parse it in a function typer calls, so a bad value is typer's own usage error (exit 2, "Invalid
-value for 'AMOUNT': ...") before the command body runs. `reference/status.py` has `parse_url`.
+value for 'AMOUNT': ...") before the command body runs. `reference/status.py` has `http_url`.
 
-1. **Write `parse_<thing>(raw: str) -> <Type>`** in the command's module. It returns the parsed
-   value or raises `typer.BadParameter` naming the value and the expected form; for a `Decimal`,
-   `raise typer.BadParameter(msg) from exc` on `InvalidOperation`.
-2. **Declare it**, typed as what the parser returns, with a metavar for the help:
+1. **Write `<what_it_accepts>(raw: str) -> <Type>`** in the command's module: `http_url`,
+   `csv_file`, `host_or_url`. The help shows the function's name as the argument's type, so
+   `URL <http_url>` tells the user something where `URL <parse_url>` reads as internals. It
+   returns the parsed value or raises `typer.BadParameter` naming the value and the expected form;
+   for a `Decimal`, `raise typer.BadParameter(msg) from exc` on `InvalidOperation`.
+2. **Declare it**, typed as what the parser returns, with a metavar for the usage line:
 
    ```python
-   amount: Annotated[Decimal, typer.Argument(parser=parse_amount, metavar="AMOUNT")]
-   margin: Annotated[Decimal, typer.Option("--margin", "-m", parser=parse_amount)] = Decimal(0)
+   amount: Annotated[Decimal, typer.Argument(parser=decimal_amount, metavar="AMOUNT")]
+   margin: Annotated[Decimal, typer.Option("--margin", "-m", parser=decimal_amount)] = Decimal(0)
    ```
 
 3. **Test both halves**, as `test_status.py` does: the parser directly, with each malformed form
