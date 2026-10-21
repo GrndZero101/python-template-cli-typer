@@ -11,6 +11,7 @@ from typing import Annotated
 import pytest
 import typer
 from rich.console import Console
+from rich.text import Text
 
 from {{ package_name }}.typer_entrypoint import run_app
 
@@ -71,7 +72,9 @@ def test_missing_argument_help_matches_explicit_help(capsys: pytest.CaptureFixtu
 
 
 def test_a_usage_error_is_a_plain_line_in_a_pipe(capsys: pytest.CaptureFixture[str]) -> None:
-    assert _run(["greet", "--bogus"]) == 2
+    # Explicit, because rich takes the default stderr console for a terminal under FORCE_COLOR.
+    pipe = Console(file=io.StringIO(), force_terminal=False)
+    assert run_app(app, ["greet", "--bogus"], prog_name="probe", console=pipe) == 2
     err = capsys.readouterr().err
     assert "Error: No such option: --bogus" in err
     assert "Error ─" not in err
@@ -80,7 +83,9 @@ def test_a_usage_error_is_a_plain_line_in_a_pipe(capsys: pytest.CaptureFixture[s
 def test_a_usage_error_is_typers_panel_at_a_terminal(capsys: pytest.CaptureFixture[str]) -> None:
     terminal = Console(file=io.StringIO(), force_terminal=True)
     assert run_app(app, ["greet", "--bogus"], prog_name="probe", console=terminal) == 2
-    err = capsys.readouterr().err
+    # typer colours its own console whenever GITHUB_ACTIONS or FORCE_COLOR is set, so match
+    # the text a person reads, not the escape codes around it.
+    err = Text.from_ansi(capsys.readouterr().err).plain
     assert "Error: No such option" not in err, "the panel's title replaces the prefix"
     assert "No such option: --bogus" in err
     assert "Try 'probe greet --help' for help." in err
