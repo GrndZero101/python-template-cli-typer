@@ -8,7 +8,10 @@ skill; this file is only what must hold.
 
 The sanctioned patches. A command's end-to-end test through `main` replaces `<module>.build_client`,
 or a TUI command's `<module>.run_screen`, with `monkeypatch.setattr` — the one thing each command
-builds rather than takes as a parameter. Patch nothing else.
+builds rather than takes as a parameter. Patch nothing else. The one exception is template
+machinery: the wiring test in `tests/test_config.py` replaces `config.Settings` to see what
+`load_settings` passes it. It feeds every field a placeholder string, which the real model would
+reject. Do not copy it into a project's own tests.
 
 ## What is mechanically enforced
 
