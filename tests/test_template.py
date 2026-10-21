@@ -1040,6 +1040,17 @@ def test_stop_gate_refuses_once_to_end_a_turn_on_an_unchecked_file(copie: Copie)
     assert again.returncode == 0, "a second stop must always be allowed"
 
 
+def _doctor_status(stdout: str) -> str:
+    """Return the git status the session doctor reported, alone or inside its JSON notice.
+
+    It replies in JSON whenever it has advice, and it has some whenever the local uv is behind the
+    latest release, which says nothing about the shims under test.
+    """
+    if not stdout.startswith("{"):
+        return stdout
+    return json.loads(stdout)["hookSpecificOutput"]["additionalContext"]
+
+
 @requires_uv
 def test_session_doctor_reports_a_missing_shim_in_a_generated_project(copie: Copie) -> None:
     """Every guard fails open; this hook is the only place a switched-off one becomes visible."""
@@ -1047,7 +1058,8 @@ def test_session_doctor_reports_a_missing_shim_in_a_generated_project(copie: Cop
     argv = _hook_argv(project, "tools/session_doctor.py")
     healthy = _run(argv, project)
     assert healthy.returncode == 0, healthy.stderr
-    assert healthy.stdout.startswith("## main"), healthy.stdout
+    assert _doctor_status(healthy.stdout).startswith("## main"), healthy.stdout
+    assert "switched off" not in healthy.stdout
     (project / ".git" / "hooks" / "commit-msg").unlink()
     broken = _run(argv, project)
     assert broken.returncode == 0, broken.stderr
