@@ -106,8 +106,10 @@ are done:
 1. **`src/<package>/config.py`** — add the field to `Settings` with a default, *and* to
    `_Overrides`.
 2. **Same file** — a per-command option: add a keyword to `load_settings`,
-   `<field>: <type> | None = None`. A global option, one that goes before the command: add a field
-   to `GlobalOptions` instead. Either way, copy it into `given` when it is not `None`.
+   `<field>: <type> | None = None`, and copy it into `given` there when it is not `None`. A global
+   option, one that goes before the command: add a field to `GlobalOptions` instead, and copy it in
+   `_global_overrides`. The two are separate functions so neither passes the complexity limit as
+   settings accumulate; when one does, split it the same way, never raise the limit.
 3. **`src/<package>/options.py`** — declare the option alias with a `None` default and
    `(env: {env_var('<field>')})` in its help. A boolean needs both halves: `--x/--no-x`.
 4. **Put the option where it is parsed.** Per-command: on each command that uses it, passed to
@@ -142,9 +144,51 @@ Send it in a header, never the query string: the client logs every URL at debug.
 `token`, `password`, `secret`, `api_key` or `private_key` that is not `SecretStr` fails
 `tests/test_config.py`. Why: `reference/configuration.md`.
 
+## Recipe: add a file-only setting
+
+A setting too structured for a flag or a variable: a mapping of named profiles, a list of rules.
+It lives in the config file only, under its own key, and is validated with every other setting:
+
+```yaml
+profiles:
+  home: {path: ~/data/home, format: csv}
+```
+
+1. **`src/<package>/config.py`** — model the shape as a frozen pydantic model, add the field to
+   `Settings` with an empty default (`profiles: dict[str, Profile] = Field(default_factory=dict)`),
+   and name it in `FILE_ONLY_FIELDS`. Not in `_Overrides`, `load_settings` or `options.py`.
+
+That exempts it from the flag steps of the wiring tests, and a validation error then names the key
+inside the file that failed (`profiles.home.format=...`) rather than a flag it does not have. Test
+it as `tests/test_config_file.py` tests the file: write YAML under `tmp_path`, pass `--config`. A
+scalar a user may want to override for one run is an ordinary setting, flag and all, even when it
+usually lives in the file.
+
+## Recipe: open a file in the user's editor
+
+typer 0.27's vendored click has no `click.edit()`. Copy the vetted replacement, which honours
+`$VISUAL` and `$EDITOR` with arguments (`code --wait`), quoted Windows paths and `.cmd` launchers,
+and never runs a shell:
+
+```bash
+cp .claude/skills/python-cli-typer/reference/editor.py src/<package>/
+cp .claude/skills/python-cli-typer/reference/test_editor.py tests/
+```
+
+The command calls `edit_file(path, editor_command())`, catches `EditorError` as a runtime failure
+(exit 1, the message names the variable to set), and validates the file after the editor closes.
+A command whose job is to create or repair the config file must run while that file is broken, so
+the app callback must not load settings before it: "A command that repairs the config file" in
+`reference/configuration.md`.
+
 ## Rules every command follows
 
 - **`Annotated` for every typer parameter**, never `= typer.Option(...)` defaults. `reference/typer.md`.
+- **A command with more flags than the argument limit** (5) keeps one parameter per flag, as typer
+  requires; never bundle them into a dict or a dataclass to dodge the count. Make every option
+  keyword-only after `*`, which also clears the positional-argument rule, and put
+  `# ruff: ignore[too-many-arguments]` on the `def` line. A long list of flags on one command is a
+  hint to split it in two, so look at that first.
 - **Every command that emits data takes `--output`/`-o`**, declared per command with
   `OutputOption`, not on the callback. The format never changes because stdout is a pipe.
   `reference/output.md`.
@@ -170,8 +214,9 @@ anything else with `uv add` when the first command needs it: `httpx`, `prompt_to
 |---|---|
 | `reference/status.py`, `reference/test_status.py` | writing a command that calls an API — copy them |
 | `reference/http_client.py`, `reference/test_http_client.py` | any HTTP at all — copy them |
+| `reference/editor.py`, `reference/test_editor.py` | opening a file in `$EDITOR` — copy them |
 | `reference/httpx.md` | testing code that takes a client; pagination; error handling |
-| `reference/configuration.md` | a setting behaves unexpectedly, or before changing `config.py` |
+| `reference/configuration.md` | a setting behaves unexpectedly, before changing `config.py`, a command that edits the config file, or a per-project config file |
 | `reference/output.md` | adding an output format, or anything decorative |
 | `reference/typer.md` | typer surprises you, or before changing `cli.py` |
 | `reference/logging.md` | asserting on logs, or routing a library's logging |

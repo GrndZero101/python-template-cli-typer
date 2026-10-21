@@ -1,0 +1,90 @@
+"""Finding the user's editor, and running it. Nothing here starts a real editor."""
+
+import functools
+from collections.abc import Sequence
+from pathlib import Path
+
+import pytest
+
+from {{ package_name }}.editor import (
+    EditorError,
+    edit_file,
+    editor_command,
+    split_command,
+)
+
+
+def _on_path(name: str) -> str | None:
+    """Stand in for `shutil.which`: every program is on PATH, under /bin."""
+    return f"/bin/{name}"
+
+
+def _nothing_on_path(_name: str) -> str | None:
+    return None
+
+
+def _only_vi(name: str) -> str | None:
+    return "/usr/bin/vi" if name == "vi" else None
+
+
+def _record(seen: list[Sequence[str]], argv: Sequence[str]) -> int:
+    """Stand in for running the editor: note the command line, report success."""
+    seen.append(argv)
+    return 0
+
+
+def _fail(_argv: Sequence[str]) -> int:
+    return 3
+
+
+def _cannot_start(argv: Sequence[str]) -> int:
+    raise FileNotFoundError(argv[0])
+
+
+def test_visual_wins_over_editor() -> None:
+    environ = {"VISUAL": "nvim", "EDITOR": "nano"}
+    assert editor_command(environ, "linux", _on_path) == ["/bin/nvim"]
+
+
+def test_editor_arguments_are_kept() -> None:
+    assert editor_command({"EDITOR": "code --wait"}, "linux", _on_path) == ["/bin/code", "--wait"]
+
+
+def test_a_quoted_windows_path_keeps_its_backslashes() -> None:
+    value = r'"C:\Program Files\Neovim\bin\nvim.exe" --clean'
+    assert split_command(value, "win32") == [r"C:\Program Files\Neovim\bin\nvim.exe", "--clean"]
+
+
+def test_windows_falls_back_to_notepad() -> None:
+    assert editor_command({}, "win32", _on_path) == ["/bin/notepad"]
+
+
+def test_elsewhere_the_first_editor_on_path_is_used() -> None:
+    assert editor_command({}, "linux", _only_vi) == ["/usr/bin/vi"]
+
+
+def test_no_editor_at_all_says_which_variable_to_set() -> None:
+    with pytest.raises(EditorError, match="set VISUAL or EDITOR"):
+        editor_command({}, "linux", _nothing_on_path)
+
+
+def test_an_editor_not_on_path_is_named() -> None:
+    with pytest.raises(EditorError, match="'hx' is not on PATH"):
+        editor_command({"EDITOR": "hx"}, "linux", _nothing_on_path)
+
+
+def test_the_file_is_the_last_argument(tmp_path: Path) -> None:
+    seen: list[Sequence[str]] = []
+    path = tmp_path / "config.yaml"
+    edit_file(path, ["/bin/code", "--wait"], run=functools.partial(_record, seen))
+    assert seen == [["/bin/code", "--wait", str(path)]]
+
+
+def test_an_editor_that_fails_is_reported(tmp_path: Path) -> None:
+    with pytest.raises(EditorError, match="exited with status 3"):
+        edit_file(tmp_path / "config.yaml", ["/bin/vi"], run=_fail)
+
+
+def test_an_editor_that_cannot_start_is_reported(tmp_path: Path) -> None:
+    with pytest.raises(EditorError, match="could not start /bin/vi"):
+        edit_file(tmp_path / "config.yaml", ["/bin/vi"], run=_cannot_start)

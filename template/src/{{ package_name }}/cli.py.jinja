@@ -17,6 +17,7 @@ Why the script is never `cli`: .claude/skills/python-cli-typer/reference/typer.m
 import sys
 
 import typer
+from typer.completion import completion_init
 
 from .about import about_command
 from .config import PROG_NAME, GlobalOptions, SettingsError, load_settings
@@ -48,6 +49,9 @@ def configure(
 
 def main(argv: list[str] | None = None) -> int:
     """Entry point. Returns an exit code; never calls sys.exit itself."""
+    # With add_completion=False typer never registers its shells, so `source_<shell>` would answer
+    # "Shell <shell> not supported" for every shell. Registering them is idempotent.
+    completion_init()
     try:
         return run_app(app, argv, prog_name=PROG_NAME)
     except SettingsError as exc:

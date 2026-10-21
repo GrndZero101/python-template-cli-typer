@@ -1,0 +1,37 @@
+"""Shell completion is emitted on request, by `{{ completion_env_var }}=source_<shell>`.
+
+typer's completion handler ends the process itself with `sys.exit`, so these expect `SystemExit`
+rather than a returned code. bash is left out: generating its script runs `bash --version`, which
+on Windows starts WSL, and that is neither fast nor deterministic.
+"""
+
+import pytest
+
+from {{ package_name }}.cli import main
+from {{ package_name }}.config import PROG_NAME
+
+COMPLETE_VAR = "{{ completion_env_var }}"
+
+
+@pytest.mark.parametrize("shell", ["zsh", "fish", "powershell", "pwsh"])
+def test_each_shell_gets_a_script_naming_the_program(
+    shell: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv(COMPLETE_VAR, f"source_{shell}")
+    with pytest.raises(SystemExit) as exited:
+        main([])
+    captured = capsys.readouterr()
+    assert exited.value.code == 0
+    assert "not supported" not in captured.out + captured.err
+    assert PROG_NAME in captured.out
+
+
+def test_a_command_name_completes(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv(COMPLETE_VAR, "complete_powershell")
+    monkeypatch.setenv("_TYPER_COMPLETE_ARGS", f"{PROG_NAME} ab")
+    monkeypatch.setenv("_TYPER_COMPLETE_WORD_TO_COMPLETE", "ab")
+    with pytest.raises(SystemExit):
+        main([])
+    assert capsys.readouterr().out.startswith("about")

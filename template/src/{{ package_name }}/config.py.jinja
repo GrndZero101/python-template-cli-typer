@@ -10,8 +10,10 @@ Each field reads `{{ script_name | upper | replace('-', '_') }}_<FIELD>`, so `ou
 `{{ script_name | upper | replace('-', '_') }}_OUTPUT`. To add a setting, follow "Recipe: add a
 setting" in the python-cli-typer skill; the wiring tests at the end of `tests/test_config.py` fail,
 naming the missed step, until it is done. A credential follows "Recipe: add a secret setting"
-instead: typed `SecretStr`, never a flag, and masked everywhere it is shown. Every field is also
-read from the config file under its own name, with no further edit.
+instead: typed `SecretStr`, never a flag, and masked everywhere it is shown. A setting too
+structured for a flag, such as a mapping of models, follows "Recipe: add a file-only setting" and is
+named in `FILE_ONLY_FIELDS`. Every field is also read from the config file under its own name, with
+no further edit.
 
 No `.env` file is read, so a stray file in the working directory cannot change a test's outcome.
 To opt in, add `env_file=".env"` to `model_config` and return `dotenv_settings` after
@@ -33,6 +35,9 @@ from .output import OutputFormat
 PROG_NAME = "{{ script_name }}"
 DIST_NAME = "{{ package_name | replace('_', '-') }}"
 ENV_PREFIX = "{{ script_name | upper | replace('-', '_') }}_"
+# Settings too structured for a flag, such as a mapping of models: set in the config file only.
+# Like a secret, each takes no flag, no `_Overrides` key and no `load_settings` keyword.
+FILE_ONLY_FIELDS: tuple[str, ...] = ()
 
 
 class SettingsError(ValueError):
@@ -88,9 +93,13 @@ def env_var(field: str) -> str:
 def _describe(error: ErrorDetails) -> str:
     """Render one validation error as `field=value (--flag, VAR or the config file): reason`.
 
-    A secret's value is masked, and it is offered no flag, since it has none.
+    A secret's value is masked, and it is offered no flag, since it has none. A file-only
+    setting names the key inside it that failed, such as `profiles.home.path`.
     """
     field = str(error["loc"][0]) if error["loc"] else "settings"
+    if field in FILE_ONLY_FIELDS:
+        where = ".".join(str(part) for part in error["loc"])
+        return f"{where}={error['input']!r} (the config file): {error['msg']}"
     if field in secret_fields():
         return f"{field}='**********' ({env_var(field)} or the config file): {error['msg']}"
     flag = f"--{field.replace('_', '-')}"
@@ -110,6 +119,22 @@ class GlobalOptions:
     config: Path | None = None
 
 
+def _global_overrides(options: GlobalOptions) -> _Overrides:
+    """Return the global flags that were given, as overrides.
+
+    Apart from `load_settings`, which adds the command's own flags, so neither function grows past
+    the complexity limit as settings are added.
+    """
+    given: _Overrides = {}
+    verbose = options.verbose
+    if verbose is not None:
+        given["verbose"] = verbose
+    config = options.config
+    if config is not None:
+        given["config"] = config
+    return given
+
+
 def load_settings(
     options: GlobalOptions,
     *,
@@ -121,13 +146,7 @@ def load_settings(
     `global_options(ctx)`, or `GlobalOptions()` where there is no command line. A keyword or field
     left as `None` was not given and does not override anything.
     """
-    given: _Overrides = {}
-    verbose = options.verbose
-    if verbose is not None:
-        given["verbose"] = verbose
-    config = options.config
-    if config is not None:
-        given["config"] = config
+    given = _global_overrides(options)
     if output is not None:
         given["output"] = output
     try:

@@ -11,8 +11,8 @@ description: >-
 # Data command recipes
 
 A data command is an ordinary command of this CLI — **python-cli-typer** owns the command shape,
-settings and output — whose work is a polars pipeline. Verified against polars 1.44, duckdb 1.5
-and pyarrow 25.
+settings and output — whose work is a polars pipeline. Verified against polars 2.0, duckdb 1.5
+and pyarrow 26.
 
 **No pandas.** polars covers the same ground with a stricter schema model, and mixing the two means
 two mental models, two null semantics, and a silent copy at every boundary.
@@ -75,10 +75,11 @@ A `LazyFrame` reprs as a plan, so a breakpoint mid-pipeline shows no rows. From 
 - **`stage.explain()`** — the optimized plan as text. Use it to confirm a filter was pushed down
   into the scan rather than run after a full read.
 
-`LazyFrame.profile()` is deprecated since polars 1.43: per-node timings mislead under the streaming
-engine. To find a slow stage, time `collect()` on successive stages instead.
+`LazyFrame.profile()` is gone in polars 2.0, deprecated since 1.43 because per-node timings mislead
+under the streaming engine. To find a slow stage, time `collect()` on successive stages instead.
 
-For data larger than memory, `collect(engine="streaming")`. `collect(streaming=True)` was removed.
+For data larger than memory, `collect(engine="streaming")`. `collect(streaming=True)` raises a
+`TypeError` in 2.0.
 
 ## duckdb: when SQL reads better
 
