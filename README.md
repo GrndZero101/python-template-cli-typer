@@ -171,7 +171,11 @@ has the details.
 it whenever a template declares any, exiting 4 without it. Every task here is guarded to run on
 `copy` only, so an update runs none of them. An agent can run the update too, but it cannot answer
 copier's prompts: give it `--defaults`, with new questions answered explicitly (below). Run it in a
-terminal of your own when you want copier to ask.
+terminal of your own when you want copier to ask — on Windows, a real console: from Git Bash or any
+other shell without one, copier's prompts crash with `NoConsoleScreenBufferError`, so there too the
+update needs `--defaults`. Two warnings on Windows are noise: "Make sure Git >= 2.24 is installed"
+(copier misreads git's `.windows.N` version suffix) and a `MissingFileWarning` for the answers file
+during the base update (the old version is rendered in a temporary directory that lacks it).
 
 **`uv sync` before any check.** A dependency the template dropped stays installed in `.venv` until
 you sync. `ty` then still resolves an import that `pyproject.toml` no longer provides, and the gate
@@ -196,6 +200,12 @@ usual tools work: `git checkout --ours <file>` keeps the project's version, `git
 replaces the whole file, though, not just the conflicted hunks, so `--theirs` also drops any
 project-only lines *outside* the markers. Use it only on a file you never meant to diverge;
 otherwise resolve hunk by hunk.
+
+A fix the project made locally and the template later adopted is the one case to watch: when the
+template puts it at a different spot in the file, the merge keeps both copies, with no markers.
+Python keeps the later one, so the project's version — and anything only it did — silently stops
+applying. `ruff` flags the duplicate (F811) only when the two names match, so after resolving, read
+`git diff` for a definition that now appears twice.
 
 While any file still holds markers, the edit-time gate pauses. A save lists the conflicted files
 instead of reporting syntax errors from each one. `check-merge-conflict` blocks the commit if any

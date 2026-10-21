@@ -32,10 +32,13 @@ to register them, and `tests/test_completion.py` checks every shell emits a scri
 That output is a clean `#compdef` block with no `fpath` or `compinit` lines. The env var is derived
 from the program name, uppercased — so a `prog_name` containing a dot yields an invalid variable;
 rely on the `[project.scripts]` name. `source_bash`, `source_fish` and `source_powershell` work the
-same way. PowerShell evaluates it on each start, from a line in `$PROFILE`:
+same way. PowerShell evaluates it on each start, from a line in `$PROFILE`. The trailing
+`Remove-Item` is required: unlike the zsh one-liner, which scopes the variable to one command, this
+line sets it for the session, and click emits the script on every invocation while it is set, so
+without it every later `tool` prints completion code instead of running (verified):
 
 ```powershell
-$env:_TOOL_COMPLETE = 'source_powershell'; tool | Out-String | Invoke-Expression
+$env:_TOOL_COMPLETE = 'source_powershell'; tool | Out-String | Invoke-Expression; Remove-Item Env:_TOOL_COMPLETE
 ```
 
 **bash on Windows:** typer's bash support checks the version by running `bash`, and on Windows the

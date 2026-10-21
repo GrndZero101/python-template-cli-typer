@@ -1,4 +1,6 @@
 # This file records the answers given when the project was generated.
-# `copier update` reads it to re-apply template changes. Do not delete it, and do not edit it
-# by hand — copier overwrites it on every update.
+# `copier update --trust` reads it to re-apply template changes; add `--defaults` to keep these
+# answers without being asked, which a shell that is not a real console (an agent's, or Git Bash
+# on Windows) needs. Do not delete it, and do not edit it by hand — copier overwrites it on every
+# update.
 {{ dict(_copier_answers, copyright_year=copyright_year) | to_nice_yaml -}}

@@ -130,10 +130,11 @@ Shell completion is emitted rather than installed. zsh, written once to a file o
 {{ completion_env_var }}=source_zsh {{ script_name }} > "${ZDOTDIR:-$HOME}/completions/_{{ script_name }}"
 ```
 
-PowerShell, a line in `$PROFILE`:
+PowerShell, a line in `$PROFILE`. The `Remove-Item` matters: the variable would otherwise stay set
+for the session, and every later `{{ script_name }}` would print the script instead of running:
 
 ```powershell
-$env:{{ completion_env_var }} = 'source_powershell'; {{ script_name }} | Out-String | Invoke-Expression
+$env:{{ completion_env_var }} = 'source_powershell'; {{ script_name }} | Out-String | Invoke-Expression; Remove-Item Env:{{ completion_env_var }}
 ```
 
 `source_fish` and `source_bash` work the same way. On Windows, generating the bash script runs
@@ -203,7 +204,9 @@ Do not delete either answers file: `copier update` reads it to know what you ans
 `--trust` is required because the template declares `_tasks`. They run on the first copy only, so
 an update runs none of them, but copier asks for the flag anyway and exits 4 without it. An agent
 can run the update with `--defaults`, since it cannot answer copier's prompts; a new question then
-takes the template's default, so check `git diff` on both answers files. `uv sync` comes before any
+takes the template's default, so check `git diff` on both answers files. On Windows, `--defaults`
+is needed from Git Bash or any other shell that is not a real console: copier's prompts crash there
+with `NoConsoleScreenBufferError`. `uv sync` comes before any
 check, so a dependency the template dropped is gone from `.venv` too. Conflicts, new questions and
 pinning a version:
 [Keeping it in sync](https://github.com/GrndZero101/python-template-cli-typer#keeping-it-in-sync-with-the-template).
