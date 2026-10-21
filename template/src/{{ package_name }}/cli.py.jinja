@@ -23,6 +23,7 @@ from .about import about_command
 from .config import PROG_NAME, GlobalOptions, SettingsError, load_settings
 from .logging_setup import configure_logging
 from .options import ConfigOption, VerboseOption, VersionOption
+from .output import print_error
 from .typer_entrypoint import run_app
 
 USAGE_ERROR = 2
@@ -55,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return run_app(app, argv, prog_name=PROG_NAME)
     except SettingsError as exc:
-        sys.stderr.write(f"Error: {exc}\n")
+        print_error(str(exc))
         return USAGE_ERROR
 
 

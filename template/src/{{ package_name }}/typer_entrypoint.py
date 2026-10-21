@@ -10,14 +10,30 @@ import contextlib
 import sys
 
 import typer
+from rich.console import Console
 from typer._click.exceptions import (  # ruff: ignore[import-private-name]
     ClickException,
     MissingParameter,
     NoArgsIsHelpError,
 )
+from typer.rich_utils import rich_format_error
+
+from .output import err, print_error
 
 
-def _show_help_for_missing(exc: MissingParameter) -> None:
+def _show_error(exc: ClickException, console: Console) -> None:
+    """Print a usage error: typer's rich panel at a terminal, click's plain lines elsewhere.
+
+    Plain lines keep a long message whole in a log, where a panel would wrap it. `console`
+    says only whether stderr is a terminal; typer's formatter opens its own on stderr.
+    """
+    if console.is_terminal:
+        rich_format_error(exc)
+        return
+    exc.show()
+
+
+def _show_help_for_missing(exc: MissingParameter, console: Console) -> None:
     """Print the command's full help, then the error, both to stderr.
 
     With rich installed, typer's help formatter prints straight to stdout and `get_help()`
@@ -26,16 +42,18 @@ def _show_help_for_missing(exc: MissingParameter) -> None:
     which is echoed to stderr explicitly.
     """
     if exc.ctx is None:
-        exc.show()
+        _show_error(exc, console)
         return
     with contextlib.redirect_stdout(sys.stderr):
         help_text = exc.ctx.get_help()
     if help_text:
         typer.echo(help_text, err=True, color=exc.ctx.color)
-    typer.echo(f"Error: {exc.format_message()}", err=True, color=exc.ctx.color)
+    print_error(exc.format_message(), console=console)
 
 
-def run_app(app: typer.Typer, argv: list[str] | None, prog_name: str) -> int:
+def run_app(
+    app: typer.Typer, argv: list[str] | None, prog_name: str, console: Console = err
+) -> int:
     """Invoke `app` with `argv` and translate its result into an exit code.
 
     With `standalone_mode=False`, typer's own dispatch (`typer/core.py::_main`)
@@ -50,9 +68,13 @@ def run_app(app: typer.Typer, argv: list[str] | None, prog_name: str) -> int:
 
     A command missing a required argument raises `MissingParameter`, whose own
     `.show()` prints only a terse usage line. The full help is more useful, so it
-    is printed instead, followed by the error. It is still a usage error, though:
-    the exit code stays 2 and everything goes to stderr, so `tool cmd && next`
-    stops and nothing lands in a pipe.
+    is printed instead, followed by the error. At a terminal every error is typer's
+    rich panel; in a pipe or a log it is plain lines, whole. It is still a usage
+    error, though: the exit code stays 2 and everything goes to stderr, so
+    `tool cmd && next` stops and nothing lands in a pipe.
+
+    `console` decides only whether stderr is a terminal; a test passes
+    `Console(file=io.StringIO(), force_terminal=True)` to see the panel path.
     """
     try:
         result = app(args=argv, standalone_mode=False, prog_name=prog_name)
@@ -60,9 +82,9 @@ def run_app(app: typer.Typer, argv: list[str] | None, prog_name: str) -> int:
         exc.show()
         return 0
     except MissingParameter as exc:
-        _show_help_for_missing(exc)
+        _show_help_for_missing(exc, console)
         return int(exc.exit_code)
     except ClickException as exc:
-        exc.show()
+        _show_error(exc, console)
         return int(exc.exit_code)
     return int(result) if isinstance(result, int) else 0

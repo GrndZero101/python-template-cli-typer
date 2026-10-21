@@ -28,7 +28,7 @@ from rich.table import Table
 
 from .config import load_settings
 from .options import OutputOption, global_options
-from .output import OutputFormat, out
+from .output import OutputFormat, out, print_error
 
 RUNTIME_FAILURE = 1
 FIRST_SERVER_ERROR = 500
@@ -123,6 +123,9 @@ def summary_command(
         summary = summarize(scan_records(records))
     except pl.exceptions.PolarsError as exc:
         logger.opt(exception=exc).debug("could not summarize {}", records)
-        sys.stderr.write(f"Error: could not summarize {records}: {exc}\n")
+        print_error(
+            f"could not summarize {records}: {exc}",
+            hint="the file needs service, status and duration_ms columns",
+        )
         raise typer.Exit(RUNTIME_FAILURE) from exc
     emit_summary(summary, settings.output)

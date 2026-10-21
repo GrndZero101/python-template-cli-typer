@@ -12,7 +12,6 @@ ordinary error on stderr rather than a broken screen. It starts the app only thr
 `run_screen`, which a test through `main` replaces, so the command is tested without a screen.
 """
 
-import sys
 from pathlib import Path
 from typing import Annotated, ClassVar
 
@@ -23,6 +22,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.widgets import DataTable, Footer, Input
 
+from .output import print_error
 from .rows import Row, RowTable, matching_rows, read_rows
 
 RUNTIME_FAILURE = 1
@@ -96,7 +96,7 @@ def browse_command(
         source = read_rows(path)
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         logger.opt(exception=exc).debug("could not read {}", path)
-        sys.stderr.write(f"Error: could not read {path}: {exc}\n")
+        print_error(f"could not read {path}: {exc}", hint="it needs a header row and UTF-8 text")
         raise typer.Exit(RUNTIME_FAILURE) from exc
     logger.debug("browsing {} rows from {}", len(source.rows), path)
     run_screen(source)
