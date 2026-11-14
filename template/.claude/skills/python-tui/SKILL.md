@@ -25,6 +25,16 @@ cp .claude/skills/python-tui/reference/rows.py .claude/skills/python-tui/referen
 cp .claude/skills/python-tui/reference/test_rows.py .claude/skills/python-tui/reference/test_browse.py tests/
 ```
 
+Then add one line under `[tool.pytest.ini_options]` in `pyproject.toml`:
+
+```toml
+asyncio_default_fixture_loop_scope = "function"
+```
+
+pytest-asyncio warns at startup while that option is unset, and `filterwarnings = ["error"]` turns
+the warning into a crash of every test run. It is not in the scaffold because `strict_config`
+rejects the key in a project without pytest-asyncio installed.
+
 They pass the gate and their tests exactly as copied (a generation test proves it). `browse` shows
 a CSV file as a table that narrows as you type. Then:
 

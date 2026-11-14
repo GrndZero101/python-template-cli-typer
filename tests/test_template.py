@@ -738,6 +738,16 @@ def test_data_reference_code_passes_the_gate_where_the_recipe_puts_it(copie: Cop
     _gate_and_test(project)
 
 
+PYTEST_SECTION = "[tool.pytest.ini_options]\n"
+
+
+def _add_pytest_option(pyproject: Path, line: str) -> None:
+    """Make the recipe's one-line edit under `[tool.pytest.ini_options]`, failing if it has moved."""
+    text = pyproject.read_text(encoding="utf-8")
+    assert PYTEST_SECTION in text, "the scaffold's pyproject.toml lost its pytest section"
+    pyproject.write_text(text.replace(PYTEST_SECTION, f"{PYTEST_SECTION}{line}\n", 1), "utf-8")
+
+
 @requires_uv
 @requires_prek
 def test_tui_reference_code_passes_the_gate_where_the_recipe_puts_it(copie: Copie) -> None:
@@ -750,6 +760,9 @@ def test_tui_reference_code_passes_the_gate_where_the_recipe_puts_it(copie: Copi
     ):
         added = _run(command, project)
         assert added.returncode == 0, added.stderr
+    _add_pytest_option(
+        project / "pyproject.toml", 'asyncio_default_fixture_loop_scope = "function"'
+    )
     reference = project / TUI_REFERENCE_DIR
     for name in ("rows.py", "browse.py"):
         shutil.copy(reference / name, project / "src" / PACKAGE_NAME / name)
@@ -1053,7 +1066,9 @@ def test_stop_gate_refuses_once_to_end_a_turn_on_an_unchecked_file(copie: Copie)
         check=False,
     )
     assert first.returncode == 2, first.stdout + first.stderr
-    assert "invalid-return-type" in first.stderr
+    # The file and line, not ty's rule name: ty 0.0.104 renamed invalid-return-type to
+    # invalid-explicit-return, and the gate runs the latest ty.
+    assert "probe.py:6" in first.stderr, first.stderr
     again = subprocess.run(
         argv,
         cwd=project,
