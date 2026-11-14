@@ -89,8 +89,10 @@ PACKAGE_NAME = "a_deliberately_long_package_name"
 DIST_NAME = PACKAGE_NAME.replace("_", "-")
 SCRIPT_NAME = "weather-tools"
 
-# The lowest `python_version` copier.yml offers. Every other test generates at the default.
+# The lowest and highest `python_version` copier.yml offers. Every other test generates at the
+# default; these two prove each end of the range runs, not just declares itself.
 PYTHON_FLOOR = "3.12"
+PYTHON_CEILING = "3.15"
 
 BASE_ANSWERS = {
     "project_name": "Weather Tools",
@@ -623,22 +625,44 @@ def test_python_version_file_follows_the_answer(copie: Copie) -> None:
     assert f'requires-python = ">={PYTHON_FLOOR}"' in pyproject
 
 
+def _python_choices() -> list[str]:
+    """Read the `python_version` choices out of copier.yml, in order.
+
+    A regex rather than a YAML load: the file is Jinja-bearing copier config, and the block is
+    the one place its shape is fixed by this test.
+    """
+    text = (REPO_ROOT / "copier.yml").read_text(encoding="utf-8")
+    block = text.split("\npython_version:", 1)[1].split("\n\n", 1)[0]
+    return re.findall(r'^\s+- "(\d+\.\d+)"$', block, flags=re.MULTILINE)
+
+
+def test_the_range_tests_track_copier_yml() -> None:
+    """A version added to (or dropped from) copier.yml must move the end-of-range tests with it."""
+    choices = _python_choices()
+    assert (choices[0], choices[-1]) == (PYTHON_FLOOR, PYTHON_CEILING)
+
+
 @requires_uv
 @requires_prek
-def test_generated_project_works_at_the_python_floor(copie: Copie) -> None:
-    """A project that declares the floor must pass its gate and tests running on it.
+@pytest.mark.parametrize("python_version", [PYTHON_FLOOR, PYTHON_CEILING])
+def test_generated_project_works_at_each_end_of_the_python_range(
+    copie: Copie, python_version: str
+) -> None:
+    """A project that declares a version must pass its gate and tests running on it.
 
-    Without this, answering an older version produced a project that passed everything on 3.14
-    and then failed at import on the version it claimed to support. ty targets `.python-version`,
-    so the gate here also rejects an API the floor does not have.
+    At the floor: answering an older version once produced a project that passed everything on
+    3.14 and then failed at import on the version it claimed to support. ty targets
+    `.python-version`, so the gate here also rejects an API the floor does not have. At the
+    ceiling: a new CPython ships before every compiled dependency has a wheel for it, and a
+    dependency without one makes `uv sync` build from source or fail.
     """
-    project = _generate(copie, python_version=PYTHON_FLOOR)
+    project = _generate(copie, python_version=python_version)
     gate = _run(["prek", "run", "--all-files", "--skip", "no-commit-to-branch"], project)
     assert gate.returncode == 0, f"{gate.stdout}\n{gate.stderr}"
     tests = _run(["uv", "run", "python", "-m", "pytest", "-q"], project)
     assert tests.returncode == 0, f"{tests.stdout}\n{tests.stderr}"
     version = _run(["uv", "run", "python", "--version"], project)
-    assert version.stdout.startswith(f"Python {PYTHON_FLOOR}."), version.stdout
+    assert version.stdout.startswith(f"Python {python_version}."), version.stdout
 
 
 # The skills' reference files, and where their recipes say to copy them.
