@@ -73,7 +73,7 @@ extra-paths = ["tools"]
 
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
-addopts = "-x -q --tb=short"
+addopts = "-x --tb=short"
 # Named one by one rather than `strict = true`, which also adopts every strictness option a later
 # pytest adds: the same reason ruff's preview rules are listed by code above.
 strict_config = true                # a typo in this section is an error, not a silent no-op
