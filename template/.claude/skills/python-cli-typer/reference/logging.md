@@ -12,6 +12,7 @@ mandatory.
    loop; it is not an example of house style. It holds `httpcore` at INFO, because that library's
    DEBUG is a wire trace of some twenty lines per request; add any other such library to
    `CHATTY_LOGGERS` rather than lowering the whole threshold.
+
 2. **`caplog` does not work.** loguru does not propagate to pytest's handlers, so log assertions
    silently pass against empty text. Add the documented `propagate_logs` autouse fixture to
    `conftest.py`, or assert through a `logger.add(records.append)` sink.
@@ -21,6 +22,7 @@ mandatory.
    then adds one on `sys.stderr`, which by then is pytest's capture. So
    `assert "could not reach" in capsys.readouterr().err` works, and a pre-added sink silently
    receives nothing. Keep the sink approach for calling a plain function directly.
+
 3. **`logger.catch(reraise=True)`, always.** A bare `logger.catch` swallows the exception — the same
    defect as `except: pass`.
 

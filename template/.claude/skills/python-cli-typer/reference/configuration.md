@@ -19,8 +19,8 @@ The mechanism rests on one fact: **a value passed to the `Settings` constructor 
 environment**, which beats the field default. So a flag wins simply by arriving as a constructor
 argument — and an absent flag must not arrive at all. Hence:
 
-- **Every option that maps to a setting defaults to `None`**, meaning "not given". A typer default of
-  `False` or `table` is indistinguishable from the user typing it, and the environment variable
+- **Every option that maps to a setting defaults to `None`**, meaning "not given". A typer default
+  of `False` or `table` is indistinguishable from the user typing it, and the environment variable
   could then never win.
 - **`load_settings` drops the `None`s** before constructing. It builds the overrides in a
   `TypedDict`, not a `dict`: ty checks `Settings(**overrides)` against pydantic-settings' own

@@ -111,6 +111,7 @@ def totals_by_region(frame: pl.DataFrame, con: duckdb.DuckDBPyConnection) -> pl.
 
 - **SQL in a module constant**, never assembled with an f-string. A value goes in as a parameter:
   `con.execute("SELECT ... WHERE region = ?", [region])`.
+
 - **`fetchone()` returns `None` when there is no row**, so `ty` rejects `fetchone()[0]`. Check it:
 
   ```python
@@ -123,6 +124,7 @@ def totals_by_region(frame: pl.DataFrame, con: duckdb.DuckDBPyConnection) -> pl.
 - **Cast aggregates in the SQL.** duckdb's `sum` of integers is a `HUGEINT`, which reaches polars
   as `Decimal(38, 0)`; `::BIGINT` makes it an `Int64`. The schema assertion in the test catches it
   either way.
+
 - `.pl(lazy=True)` hands the result to polars as a `LazyFrame`, to continue a lazy pipeline.
 
 A test passes `duckdb.connect()` — an in-memory database — and whatever frame it likes.
