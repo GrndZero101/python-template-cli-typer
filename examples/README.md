@@ -77,9 +77,10 @@ change from what was just the model.
 
 ### 5. Record
 
-Add a row to the results table under "Spec runs" in the base repository's
-[TODO.md](https://github.com/GrndZero101/python-template-base/blob/main/TODO.md), and turn each
-template finding into an item in the phase it belongs to.
+Add a row to the results table in the base repository's "Spec runs" note
+([D-0023](https://github.com/GrndZero101/python-template-base/blob/main/.plan/docs/D-0023-spec-runs.md)
+in its `tp` store), and turn each template finding into a task there, tagged by the layer it
+touches.
 
 Things worth watching for while it builds: the branch guard on the first edit, whether the gate's
 stderr was actionable, whether the skill was loaded at all, and whether the result needed

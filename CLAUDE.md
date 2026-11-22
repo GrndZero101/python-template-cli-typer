@@ -53,7 +53,8 @@ Anything that needs the script name should import it from `config.py` rather tha
 
 ## Adopting a project's code
 
-A field report in `TODO.md` names working code to copy. Copy it **byte for byte**, docstrings and
+A field finding — a task tagged `cli` in the base repo's `tp` store, which `TODO.md` here points
+to — names working code to copy. Copy it **byte for byte**, docstrings and
 tests included. On that project's next `copier update`, every line that upstream changed and the
 project did not change the same way comes back as a conflict, so an improvement made on the way in
 turns a clean merge into markers across every file it touched. Improve the code in a later merge,
