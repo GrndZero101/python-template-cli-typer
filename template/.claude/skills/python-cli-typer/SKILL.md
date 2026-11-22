@@ -29,6 +29,7 @@ a command that calls an API, start from `reference/status.py` instead — the ne
      `typer.Exit(1)` on a runtime failure. Nothing else. A positional argument is
      `names: Annotated[list[str], typer.Argument(help="...")]`, with no default; one that must be
      validated or is not a string: "Recipe: a validated argument".
+
 2. **Register it in `src/<package>/cli.py`**, beside `about`:
 
    ```python
@@ -48,6 +49,7 @@ a command that calls an API, start from `reference/status.py` instead — the ne
    The epilog is rich markup, a `[bold]Examples[/bold]` heading then one `tool probe ...` line per
    use with a `[dim]# why[/dim]` comment, **separated by blank lines**: rich joins adjacent lines
    into one paragraph.
+
 3. **Write `tests/test_<name>.py`** in two halves, as `test_about.py` has: the plain functions with
    injected dependencies, then end to end through `main([...])`, asserting the exit code, stdout
    (`json.loads` it for `-o json`) and stderr separately. Helpers that several test modules share
@@ -57,6 +59,7 @@ a command that calls an API, start from `reference/status.py` instead — the ne
    collects it from every module that imports it, and `filterwarnings = ["error"]` turns that
    warning into a failure. A test server closes its listening socket, or the
    `PytestUnraisableExceptionWarning` fails the run the same way.
+
 4. **Check:** `uv run pytest`, then `prek run --all-files`.
 
 ## Recipe: call an HTTP API
@@ -100,6 +103,7 @@ value for 'AMOUNT': ...") before the command body runs. `reference/status.py` ha
    `URL <http_url>` tells the user something where `URL <parse_url>` reads as internals. It
    returns the parsed value or raises `typer.BadParameter` naming the value and the expected form;
    for a `Decimal`, `raise typer.BadParameter(msg) from exc` on `InvalidOperation`.
+
 2. **Declare it**, typed as what the parser returns, with a metavar for the usage line:
 
    ```python
