@@ -896,13 +896,6 @@ def test_a_project_still_passes_its_gate_after_updating(
 HELPER_BRANCH = "chore/template-update"
 
 
-def _uv_tools() -> set[str]:
-    """Return the names `uv tool list` shows, which is where the helper's doctor looks."""
-    listed = subprocess.run(["uv", "tool", "list"], capture_output=True, text=True, check=False)
-    lines = listed.stdout.splitlines() if listed.returncode == 0 else []
-    return {line.split(maxsplit=1)[0] for line in lines if line and not line.startswith("-")}
-
-
 def _run_helper_update(
     helper: Path, project: Path, gitconfig: Path
 ) -> subprocess.CompletedProcess[str]:
@@ -910,8 +903,22 @@ def _run_helper_update(
 
     The helper's doctor reads git's identity with `git config`, which never sees the GIT_AUTHOR_*
     variables CI sets, so it gets a global config file of its own.
+
+    The helper upgrades copier and prek before it updates, so it gets uv tools of its own too, first
+    on PATH. On the machine's real ones it upgraded the developer's tools as a side effect, and on
+    Windows it failed whenever any prek.exe was running, such as the commit hook that runs this suite
+    or another xdist worker's gate: uv cannot replace an executable in use (os error 32), and leaves
+    the tool's venv at the new version and the entrypoint at the old, so later upgrades do nothing.
     """
-    env = {**os.environ, "GIT_CONFIG_GLOBAL": str(gitconfig)}
+    tools = gitconfig.parent / "uv-tools"
+    tool_bin = tools / "bin"
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": str(gitconfig),
+        "UV_TOOL_DIR": str(tools),
+        "UV_TOOL_BIN_DIR": str(tool_bin),
+        "PATH": os.pathsep.join([str(tool_bin), os.environ.get("PATH", "")]),
+    }
     command = ["uv", "run", "--script", str(helper), "update", str(project), "--", "--defaults"]
     return subprocess.run(
         command, cwd=gitconfig.parent, env=env, capture_output=True, text=True, check=False
@@ -925,8 +932,6 @@ def test_the_setup_helper_updates_both_layers_on_a_branch(
     copie: Copie, tmp_path: Path, base_checkout: Path
 ) -> None:
     """One commit per layer, made through the project's own hooks, on a branch, and main untouched."""
-    if not ON_CI and not {"copier", "prek"} <= _uv_tools():
-        pytest.skip("the helper's doctor needs copier and prek as uv tools: uv tool install")
     base = _snapshot_base(base_checkout, tmp_path)
     use_case = _snapshot_use_case(tmp_path)
     project = _generate(copie, use_case_dir=use_case, base_dir=base)
