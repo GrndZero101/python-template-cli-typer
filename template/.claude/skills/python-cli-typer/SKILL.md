@@ -205,7 +205,8 @@ the app callback must not load settings before it: "A command that repairs the c
 
 ## Rules every command follows
 
-- **`Annotated` for every typer parameter**, never `= typer.Option(...)` defaults. `reference/typer.md`.
+- **`Annotated` for every typer parameter**, never `= typer.Option(...)` defaults.
+  `reference/typer.md`.
 - **A command with more flags than the argument limit** (5) keeps one parameter per flag, as typer
   requires; never bundle them into a dict or a dataclass to dodge the count. Make every option
   keyword-only after `*`, which also clears the positional-argument rule, and put

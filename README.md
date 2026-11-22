@@ -7,11 +7,11 @@ lint config and a `prek` gate — not just documented and hoped for.
 
 This is the CLI layer of a two-layer template. It supplies the typer application, its tests and the
 skills that teach a model to extend it. The other layer is the base,
-[python-template-base](https://github.com/GrndZero101/python-template-base): the rule set, a `PreToolUse`
-guard that refuses edits to `main`, a `PostToolUse` gate that lints on every save, a `Stop` gate
-that re-checks every changed file and runs the tests before a turn can end, `ruff`/`ty`/`rumdl`/
-`prek` configured, and a custom checker for the conventions no linter covers. Copying this
-template applies the base too, so one command yields both.
+[python-template-base](https://github.com/GrndZero101/python-template-base): the rule set, a
+`PreToolUse` guard that refuses edits to `main`, a `PostToolUse` gate that lints on every save, a
+`Stop` gate that re-checks every changed file and runs the tests before a turn can end, `ruff`,
+`ty`, `rumdl` and `prek` configured, and a custom checker for the conventions no linter covers.
+Copying this template applies the base too, so one command yields both.
 
 ## Quickstart
 
@@ -164,7 +164,8 @@ uv run python tools/finish_branch.py "chore(template): update from the templates
 The base's setup helper runs this whole flow as one command, from a clone of
 [python-template-base](https://github.com/GrndZero101/python-template-base):
 `sh bootstrap.sh update my-project`, with `--finish` to merge too. It stops at a conflict and says
-how to carry on; [its README](https://github.com/GrndZero101/python-template-base#keeping-it-in-sync-with-the-template)
+how to carry on;
+[its README](https://github.com/GrndZero101/python-template-base#keeping-it-in-sync-with-the-template)
 has the details.
 
 **`--trust` runs nothing on an update.** It lets a template run its `_tasks`, and copier asks for

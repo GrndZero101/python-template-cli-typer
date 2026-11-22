@@ -94,6 +94,7 @@ stderr was actionable, whether the skill was loaded at all, and whether the resu
 | [spend.md](spend.md) | `python-data`: a declared schema over CSV and parquet, a filtered and grouped pipeline, integer money, an empty result that keeps its types |
 | [logs.md](logs.md) | `python-tui`: logic outside the app, validation before the screen opens, key bindings, a picker whose choice goes to stdout, Pilot tests |
 
-`geo` and `currency` were once shipped in the scaffold, and the original implementations survive
-in history at [`d8e26b0`](https://github.com/GrndZero101/python-template-cli-typer/tree/d8e26b0/template/src)
-— useful for comparing against what an agent builds from the spec, not for copying.
+`geo` and `currency` were once shipped in the scaffold, and the original implementations survive in
+history at
+[`d8e26b0`](https://github.com/GrndZero101/python-template-cli-typer/tree/d8e26b0/template/src) —
+useful for comparing against what an agent builds from the spec, not for copying.

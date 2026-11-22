@@ -5,15 +5,17 @@ typer command-line tool, its tests and the skills that teach a model to extend i
 **not** a Python project.
 
 The other layer is the **base**, the repository
-[python-template-base](https://github.com/GrndZero101/python-template-base): the hooks, `tools/`, `CLAUDE.md`,
-the shared skills and the gate. This layer's one `_tasks` entry applies the base to the same
-directory, so one `copier copy` of this repo yields both layers, each with its own answers file.
+[python-template-base](https://github.com/GrndZero101/python-template-base): the hooks, `tools/`,
+`CLAUDE.md`, the shared skills and the gate. This layer's one `_tasks` entry applies the base to the
+same directory, so one `copier copy` of this repo yields both layers, each with its own answers
+file.
 
-**The rules for the code shipped here are the base's `template/CLAUDE.md`**, and `template/` is
-held to exactly that standard: no nested defs, no `print`, `pathlib` and explicit encodings,
+**The rules for the code shipped here are the base's `template/CLAUDE.md`**, and `template/` is held
+to exactly that standard: no nested defs, no `print`, `pathlib` and explicit encodings,
 `raise ... from e`, and the rest. Read it in the base repository, or in any generated project, where
-it is the project's `CLAUDE.md`. This repo does not copy the base's machinery, so none of those rules
-is enforced here as you type; the generated project's gate enforces them, and `tests/` runs it.
+it is the project's `CLAUDE.md`. This repo does not copy the base's machinery, so none of those
+rules is enforced here as you type; the generated project's gate enforces them, and `tests/` runs
+it.
 
 ## Layout
 
@@ -69,8 +71,9 @@ fall back to default rules and `ty` would find no environment. What covers it in
 only when the commit touches `template/`, `tests/`, `copier.yml`, `pyproject.toml` or `uv.lock`.
 `SKIP=generation-tests git commit -m "..."` skips it deliberately.
 
-The suite needs the base. `BASE_TEMPLATE_DIR` names a checkout of python-template-base; without it the
-tests use the base on GitHub. Set it when the change under test depends on an unpushed base change:
+The suite needs the base. `BASE_TEMPLATE_DIR` names a checkout of python-template-base; without it
+the tests use the base on GitHub. Set it when the change under test depends on an unpushed base
+change:
 
 ```bash
 BASE_TEMPLATE_DIR=~/projects/github/GrndZero101/python-template-base uv run pytest
@@ -81,10 +84,10 @@ Copier includes uncommitted working-tree changes when a template is a local path
 
 The base's own CI checks this repo out and runs this suite against the base commit under test, so a
 base change that breaks this layer fails there. This repo's CI does the reverse and checks out the
-base's `main` into `base/`. Both run on Linux and macOS on a push, and on Windows only on a manual run:
-`gh workflow run ci.yml --ref <branch> -f windows=true`. The targets are Unix-alikes and Windows is
-slow, so it is checked at milestones and in work aimed at it; that run is the only check of the
-portability rules away from a Unix-alike.
+base's `main` into `base/`. Both run on Linux and macOS on a push, and on Windows only on a manual
+run: `gh workflow run ci.yml --ref <branch> -f windows=true`. The targets are Unix-alikes and
+Windows is slow, so it is checked at milestones and in work aimed at it; that run is the only check
+of the portability rules away from a Unix-alike.
 
 ## Commands
 
@@ -109,11 +112,12 @@ prek install -t pre-commit -t commit-msg -t pre-merge-commit
 
 Never edit on `main`, and `main` receives only merge commits. Nothing here enforces the first rule
 as you type: check `git status --short --branch` before the first edit and branch with
-`git switch -c <type>/<short-name>`. Commits are [Conventional Commits](https://www.conventionalcommits.org/)
-— `type(scope): summary`, imperative, lower case, no period, at most 72 characters — which
-`conventional-pre-commit` checks, and `no-commit-to-branch` refuses a commit on `main`. Finish a
-branch by squashing it to one commit and merging with `git merge --no-ff -m "<what the work does>"`;
-the merge subject describes the work, never `Merge branch '...'`.
+`git switch -c <type>/<short-name>`. Commits are
+[Conventional Commits](https://www.conventionalcommits.org/) — `type(scope): summary`, imperative,
+lower case, no period, at most 72 characters — which `conventional-pre-commit` checks, and
+`no-commit-to-branch` refuses a commit on `main`. Finish a branch by squashing it to one commit and
+merging with `git merge --no-ff -m "<what the work does>"`; the merge subject describes the work,
+never `Merge branch '...'`.
 
 The base's `tools/finish_branch.py` does the squash, the gate and the merge in one step, and the
 base's `git-workflow` skill explains why. Run it from a clone of the base against this directory,
