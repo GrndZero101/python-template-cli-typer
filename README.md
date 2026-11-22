@@ -68,6 +68,30 @@ cd my-project
 `uv sync` and install the shims. Without it copier exits 4 with "Template uses potentially unsafe
 feature: tasks".
 
+**From an agent session**, `--trust` may be refused: Claude Code's auto mode can block it, even
+once you approve it, because it lets a fetched template run commands. This template's one task
+applies the base, so `--skip-tasks` skips the base as well. Make it two calls, each without its
+tasks, then run the base's tasks yourself, in its `copier.yml`'s order. An agent cannot answer
+copier's prompts, so it passes `--defaults` and gives each answer with `-d`. Project name and
+author name have no default; the rest follow from them or have one:
+
+```bash
+copier copy --skip-tasks --defaults -d project_name="My Project" -d author_name="A Dev" \
+    gh:GrndZero101/python-template-cli-typer my-project
+cd my-project
+copier copy --skip-tasks --defaults gh:GrndZero101/python-template-base .
+git init -b main
+uv sync
+git add -A
+git commit -m "chore: generate project from python-template-base"
+prek install -t pre-commit -t commit-msg -t pre-merge-commit
+```
+
+The second call reads the shared answers from the first call's `.copier-answers.yml`, as the task
+does, so it needs none of its own. The result is the same project the one-call form makes, byte
+for byte. Ignore the first call's closing message: it says the repo and shims are wired, and under
+`--skip-tasks` they are not, until the steps above.
+
 That is the whole setup. Generation already ran `git init -b main`, `uv sync`, the initial commit,
 and all three `prek` shims. Verify and start work:
 
